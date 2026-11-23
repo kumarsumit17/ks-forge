@@ -3,7 +3,7 @@ type: Plan
 title: First version plan
 description: The plan for the suite's modern terminal for macOS and Windows: name, stack with reasons, the first version's features, what waits for later, languages, updates, packaging and the release steps.
 tags: [plan, terminal, stack, tauri, rust, pty, conpty, xterm, release]
-status: draft, waiting for the owner's approval of the name and the stack
+status: draft, name chosen (KS Forge), waiting for the owner's approval of the stack
 ---
 
 # First version plan
@@ -12,16 +12,9 @@ A fast, private terminal for macOS and Windows, easy for someone opening a termi
 
 The reference terminals (Wave Terminal, Warp, the "terminal stack" article) are used for the list of features and the feel only. No code, icons, themes, layouts or other assets come from them; everything here is written and drawn for this app.
 
-## 1. Name (owner's decision)
+## 1. Name
 
-The working name `ks-terminal` stays only until the owner picks one. Nothing that bakes the name in (GitHub repository, bundle identifier, app name, icon, workspace `.gitignore` entry) is created before that.
-
-| Name | Repository | Bundle identifier | Why |
-|---|---|---|---|
-| **KS Yantra** (recommended) | `ks-yantra` | `com.ks.yantra` | Hindi *yantra*, an instrument or machine: a power tool, and short to type. Fits the suite's Hindi-flavoured names (JaiPlayer) |
-| KS Sutra | `ks-sutra` | `com.ks.sutra` | *Sutra*, a thread or formula: commands strung together |
-| KS Console | `ks-console` | `com.ks.console` | Plain and clear, but generic |
-| KS Shell | `ks-shell` | `com.ks.shell` | Clear, but easy to confuse with the shell it runs (zsh, PowerShell) |
+**KS Forge**, chosen by the owner on 2026-11-24: repository `ks-forge`, bundle identifier and package root `com.ks.forge`. A forge is where tools are made and shaped: a power tool you shape to your own hands.
 
 ## 2. Stack (owner's decision: needs an exception to the Kotlin rule)
 
@@ -98,8 +91,8 @@ The suite's platform folders all exist: `tv/google-tv/`, `mobile/android/`, `mob
 
 ## 9. Steps
 
-1. **Owner:** pick the name and approve this plan and the stack exception. *(waiting)*
-2. Rename the folder, create the GitHub repository, the owner sets the four signing secrets; add the app to the workspace `.gitignore`, `CLAUDE.md`, `specs/platform-folders.md`, `specs/testing.md` and `specs/conventions.md`.
+1. **Owner:** pick the name *(done: KS Forge)* and approve this plan and the stack exception. *(waiting)*
+2. Rename the folder *(done)*, create the GitHub repository *(done)*, the owner sets the four signing secrets *(waiting)*; add the app to the workspace `.gitignore`, `CLAUDE.md`, `specs/platform-folders.md`, `specs/testing.md` and `specs/conventions.md`.
 3. Scaffold on `dev`: platform folders, Tauri app in `shared/`, ks-utility pinned, CLAUDE.md, graphify setup, CI.
 4. PTY core (Rust) with tests; one terminal in one window, on macOS.
 5. Tabs, splits, profiles, themes, settings screen and file, palette, search, links, clipboard, shell integration, English and Hindi, App updates.
