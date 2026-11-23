@@ -1,0 +1,34 @@
+# ---- Build output ----
+node_modules/
+dist/
+target/
+shared/src-tauri/gen/
+release/
+
+# ---- Local config ----
+.env
+.env.*
+
+# ---- Signing material (NEVER commit) ----
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# ---- Desktop packaging ----
+*.msi
+*.exe
+*.dmg
+*.app/
+
+# ---- IDE and OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# ---- graphify: generated output ----
+graphify-out/

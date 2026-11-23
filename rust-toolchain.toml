@@ -1,0 +1,5 @@
+# Same toolchain as ks-download-manager (CLAUDE.md).
+[toolchain]
+channel = "1.100"
+components = ["clippy"]
+profile = "minimal"

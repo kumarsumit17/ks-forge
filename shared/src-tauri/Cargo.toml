@@ -1,0 +1,41 @@
+[package]
+name = "ks-forge"
+# Placeholder. Release builds take the version from the git tag (CLAUDE.md).
+version = "0.0.0"
+description = "KS Forge"
+authors = ["Kumar Sumit"]
+license = "MIT"
+edition = "2024"
+
+[lib]
+# The `_lib` suffix keeps the lib name distinct from the bin name (a Windows issue,
+# see https://github.com/rust-lang/cargo/issues/8519).
+name = "ks_forge_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# First-party shared utilities (KS-Suite), pinned to one tag; see CLAUDE.md.
+ks-utility = { git = "https://github.com/kumarsumit17/ks-utility", tag = "v0.4.2" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# PTY on macOS, ConPTY on Windows, behind one API (specs/dependencies.md).
+portable-pty = "0.9"
+# The system clipboard for the shortcuts that are not the system's own (specs/dependencies.md).
+arboard = { version = "3", default-features = false }
+# The app-update request and download: HTTP/1.1, rustls, no decompression (specs/dependencies.md).
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream"] }
+tokio = { version = "1", features = ["fs", "io-util", "rt", "macros"] }
+futures-util = { version = "0.3", default-features = false }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true
