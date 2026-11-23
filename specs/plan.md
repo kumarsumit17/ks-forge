@@ -3,7 +3,7 @@ type: Plan
 title: First version plan
 description: The plan for the suite's modern terminal for macOS and Windows: name, stack with reasons, the first version's features, what waits for later, languages, updates, packaging and the release steps.
 tags: [plan, terminal, stack, tauri, rust, pty, conpty, xterm, release]
-status: draft, name chosen (KS Forge), waiting for the owner's approval of the stack
+status: approved by the owner on 2026-11-24 (name KS Forge, Rust/Tauri stack)
 ---
 
 # First version plan
@@ -18,7 +18,7 @@ The reference terminals (Wave Terminal, Warp, the "terminal stack" article) are 
 
 ## 2. Stack (owner's decision: needs an exception to the Kotlin rule)
 
-**Recommendation: Rust + Tauri 2 + TypeScript, the same stack as `ks-download-manager`.** The suite rule is Kotlin for apps, with `ks-download-manager` as the one exception, so **this needs the owner's approval as a second exception**. On approval, the workspace `CLAUDE.md` and `specs/conventions.md` name this app next to `ks-download-manager`.
+**Recommendation: Rust + Tauri 2 + TypeScript, the same stack as `ks-download-manager`.** The suite rule is Kotlin for apps, with `ks-download-manager` as the one exception, so this needs a second exception: **the owner approved it on 2026-11-24**. On approval, the workspace `CLAUDE.md` and `specs/conventions.md` name this app next to `ks-download-manager`.
 
 | Part | Choice | Licence |
 |---|---|---|
@@ -91,7 +91,7 @@ The suite's platform folders all exist: `tv/google-tv/`, `mobile/android/`, `mob
 
 ## 9. Steps
 
-1. **Owner:** pick the name *(done: KS Forge)* and approve this plan and the stack exception. *(waiting)*
+1. **Owner:** pick the name *(done: KS Forge)* and approve this plan and the stack exception *(done, 2026-11-24)*.
 2. Rename the folder *(done)*, create the GitHub repository *(done)*, the owner sets the four signing secrets *(waiting)*; add the app to the workspace `.gitignore`, `CLAUDE.md`, `specs/platform-folders.md`, `specs/testing.md` and `specs/conventions.md`.
 3. Scaffold on `dev`: platform folders, Tauri app in `shared/`, ks-utility pinned, CLAUDE.md, graphify setup, CI.
 4. PTY core (Rust) with tests; one terminal in one window, on macOS.
