@@ -39,6 +39,8 @@ export async function runSelfTest(): Promise<void> {
     const first = app.tab!;
     const pane = first.active;
     await until("shell started", () => app.sessions.get(pane)?.ptyId != null);
+    await until("first prompt", () => !!app.sessions.get(pane)!.cwd);
+    const firstPromptMs = await invoke<number>("app_uptime_ms");
     step(`renderer=${app.sessions.get(pane)!.renderer}`);
     const cmd = info.platform === "windows" ? "echo ksforge-%NUMBER_OF_PROCESSORS%x & echo ksforge-ok\r" : "echo ksforge-$((6*7))\r";
     const want = info.platform === "windows" ? "ksforge-ok" : "ksforge-42";
@@ -49,6 +51,15 @@ export async function runSelfTest(): Promise<void> {
     // Shell integration reports the folder (OSC 7) and marks the prompt (OSC 133).
     await until("folder reported by shell integration", () => !!app.sessions.get(pane)!.cwd);
     step(`folder=${app.sessions.get(pane)!.cwd}`);
+    step(`startup-to-prompt=${firstPromptMs}ms`);
+    if (info.platform !== "windows") {
+      // Output speed: a million lines through the PTY, the parser and the GPU renderer.
+      const t0 = performance.now();
+      await api.write(app.sessions.get(pane)!.ptyId!, "seq 1 1000000; echo ksforge-done\r");
+      await until("a million lines", () => screenText(pane).split("\n").some((l) => l.trim() === "ksforge-done"), 60000);
+      step(`million-lines=${Math.round(performance.now() - t0)}ms`);
+      app.sessions.get(pane)!.clear();
+    }
 
     // 2. Splits: right, then down, then moving focus and zooming.
     await app.run("splitRight");

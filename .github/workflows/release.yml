@@ -1,0 +1,280 @@
+# Release (KS-Suite specs/release-cycle.md; this repository's specs/release.md). Two ways in:
+#
+#   Tag push (vX.Y.Z on main)  Builds the macOS disk image and the Windows installer, tests
+#                              both, attests every file, and PUBLISHES the GitHub release as a
+#                              full release marked latest: only from the `release` job, and
+#                              only after every build and check passed. A failure anywhere
+#                              publishes nothing.
+#
+#   Manual run (rehearsal)     On any branch, e.g. dev, with the version to rehearse. Every job
+#                              runs as for a tag, except "the tag is on main"; nothing is
+#                              attested or published. The files stay as workflow artifacts.
+#
+# Our own environment variables start with KSF_. Runner images are named versions; actions
+# are GitHub's own, pinned to a full commit SHA (version in the comment).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to rehearse, X.Y.Z (CHANGELOG.md needs a dated section for it). Builds everything, releases nothing."
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      version: ${{ steps.v.outputs.version }}
+      rehearsal: ${{ steps.v.outputs.rehearsal }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: The tag is vMAJOR.MINOR.PATCH
+        id: v
+        env:
+          KSF_INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            KSF_TAG="v$KSF_INPUT_VERSION"
+            echo "rehearsal=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rehearsal of $KSF_TAG on $GITHUB_REF_NAME: no attestation, no release."
+          else
+            KSF_TAG="$GITHUB_REF_NAME"
+            echo "rehearsal=false" >> "$GITHUB_OUTPUT"
+          fi
+          node scripts/set-version.mjs "$KSF_TAG"
+          echo "tag=$KSF_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${KSF_TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: The tagged commit is on main
+        if: github.event_name == 'push'
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME points to $GITHUB_SHA, which is not on main. Merge into main first and tag there."
+            exit 1
+          fi
+      - name: CHANGELOG.md has a dated section for this version
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          if ! tr -d '\r' < CHANGELOG.md | grep -Eq "^## \[${V//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$"; then
+            echo "::error::CHANGELOG.md needs a line '## [$V] - YYYY-MM-DD'."
+            exit 1
+          fi
+
+  mac:
+    needs: version
+    runs-on: macos-15
+    permissions:
+      contents: read
+    env:
+      KSF_TAG: ${{ needs.version.outputs.tag }}
+      KSF_APP: shared/src-tauri/target/release/bundle/macos/KS Forge.app
+      KSF_DMG: ks-forge-v${{ needs.version.outputs.version }}-macos-arm64.dmg
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: shared/package-lock.json
+      - run: node scripts/set-version.mjs "$KSF_TAG"
+      - name: Install
+        working-directory: shared
+        run: npm ci
+      - name: Tests
+        run: |
+          (cd shared && npm test && npm run test:lang)
+          node --test scripts/test/
+          (cd shared/src-tauri && cargo test --quiet)
+      # Ad hoc signature (no Apple Developer ID yet: specs/plan.md, 8).
+      - name: Build the app
+        working-directory: shared
+        run: npm run tauri build -- --bundles app
+      - name: The app has the version and runs (self-test)
+        env:
+          V: ${{ needs.version.outputs.version }}
+        run: |
+          got=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$KSF_APP/Contents/Info.plist")
+          [ "$got" = "$V" ] || { echo "::error::app version $got, expected $V"; exit 1; }
+          codesign --verify --deep --strict "$KSF_APP"
+          OUT=$(KS_FORGE_SELFTEST=1 timeout 180 "$KSF_APP/Contents/MacOS/ks-forge" 2>&1 || true)
+          echo "$OUT" | grep KS_FORGE_SELFTEST || true
+          echo "$OUT" | grep -q "KS_FORGE_SELFTEST PASS" || { echo "::error::self-test failed"; echo "$OUT" | tail -30; exit 1; }
+      - name: Make the disk image
+        run: |
+          mkdir -p release
+          sh desktop/mac/make-dmg.sh "$KSF_APP" "release/$KSF_DMG"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mac
+          path: release/
+          if-no-files-found: error
+
+  windows:
+    needs: version
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      KSF_TAG: ${{ needs.version.outputs.tag }}
+      KSF_SETUP: ks-forge-v${{ needs.version.outputs.version }}-windows-x64-setup.exe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: shared/package-lock.json
+      - run: node scripts/set-version.mjs "$KSF_TAG"
+      - name: Install
+        working-directory: shared
+        run: npm ci
+      - name: Tests
+        run: |
+          (cd shared && npm test && npm run test:lang)
+          (cd shared/src-tauri && cargo test --quiet)
+      # Not Authenticode-signed yet (specs/plan.md, 8).
+      - name: Build the installer
+        working-directory: shared
+        run: npm run tauri build -- --bundles nsis
+      - name: Name it
+        run: |
+          mkdir -p release
+          set -- shared/src-tauri/target/release/bundle/nsis/*-setup.exe
+          [ $# -eq 1 ] && [ -f "$1" ] || { echo "::error::expected one installer, found: $*"; exit 1; }
+          cp "$1" "release/$KSF_SETUP"
+      - name: Install, self-test, uninstall
+        run: sh desktop/windows/test-installer.sh "release/$KSF_SETUP"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows
+          path: release/
+          if-no-files-found: error
+
+  attest:
+    needs: [version, mac, windows]
+    if: ${{ !cancelled() && needs.mac.result == 'success' && needs.windows.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+      # Exactly the release files, by name, and nothing else. SHA256SUMS stays in meta/ so the
+      # release job can check the files arrived unchanged; it is not attached.
+      - name: Collect the release files
+        env:
+          KSF_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          mkdir -p files meta
+          P="ks-forge-v$KSF_VERSION"
+          want="$P-macos-arm64.dmg $P-windows-x64-setup.exe"
+          for f in $want; do
+            found=$(find artifacts -type f -name "$f")
+            [ "$(printf '%s\n' "$found" | grep -c .)" = 1 ] || { echo "::error::expected exactly one $f in the artifacts, found: ${found:-none}"; exit 1; }
+            cp "$found" files/
+          done
+          (cd files && sha256sum $(ls | LC_ALL=C sort)) > meta/SHA256SUMS
+          cat meta/SHA256SUMS
+          [ "$(ls files | wc -l)" -eq 2 ] || { echo "::error::files/ must hold only the release files"; ls files; exit 1; }
+      # Not in a rehearsal: an attestation is a permanent public record, and files that are
+      # never released must not have one.
+      - name: Build provenance for every file
+        if: needs.version.outputs.rehearsal != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: files/*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: |
+            files/
+            meta/
+          if-no-files-found: error
+
+  release:
+    needs: [version, attest]
+    if: ${{ !cancelled() && needs.attest.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      KSF_TAG: ${{ needs.version.outputs.tag }}
+      KSF_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: .
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Check every file arrived unchanged, and nothing else is attached
+        run: |
+          (cd files && sha256sum -c ../meta/SHA256SUMS)
+          [ "$(ls files | wc -l)" -eq 2 ] || { echo "::error::expected 2 release files"; ls files; exit 1; }
+      - name: Check the attestation of every file
+        if: needs.version.outputs.rehearsal != 'true'
+        run: |
+          for f in files/*; do gh attestation verify "$f" -R "$GH_REPO" > /dev/null && echo "attested: $(basename "$f")"; done
+      - name: Release notes
+        run: |
+          node scripts/release-notes.mjs "$KSF_VERSION" > notes.md
+          cat notes.md
+      - name: Rehearsal - keep the notes with the files, create no release
+        if: needs.version.outputs.rehearsal == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: notes.md
+          if-no-files-found: error
+      # gh uploads to a hidden draft and publishes it once every upload is done, so a failed
+      # upload never leaves a public release with missing files. A published release for this
+      # tag is never changed (the run fails instead; the next version gets a new tag).
+      - name: Publish the release (full release, marked latest)
+        if: needs.version.outputs.rehearsal != 'true'
+        run: |
+          if state=$(gh release view "$KSF_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$state" = "true" ]; then
+              gh release delete "$KSF_TAG" --yes
+            else
+              echo "::error::$KSF_TAG is already published; it is never changed. Make the next version instead."
+              exit 1
+            fi
+          fi
+          gh release create "$KSF_TAG" --verify-tag --latest --title "KS Forge $KSF_VERSION" --notes-file notes.md files/*
+          [ "$(gh release view "$KSF_TAG" --json isDraft --jq .isDraft)" = false ] || { echo "::error::the release was not published"; exit 1; }

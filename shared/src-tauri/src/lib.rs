@@ -151,6 +151,14 @@ fn selftest_enabled() -> bool {
     std::env::var_os("KS_FORGE_SELFTEST").is_some()
 }
 
+/// Milliseconds since the process started, for the self-test's start-up measurement.
+#[tauri::command]
+fn app_uptime_ms() -> u64 {
+    START.get().map_or(0, |t| t.elapsed().as_millis() as u64)
+}
+
+static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
 #[tauri::command]
 fn selftest_report(handle: AppHandle, ok: bool, report: String) {
     if !selftest_enabled() {
@@ -193,6 +201,7 @@ fn menu(handle: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 }
 
 pub fn run() {
+    let _ = START.set(std::time::Instant::now());
     tauri::Builder::default()
         .setup(|app| {
             let handle = app.handle().clone();
@@ -250,6 +259,7 @@ pub fn run() {
             update_install,
             selftest_enabled,
             selftest_report,
+            app_uptime_ms,
         ])
         .build(tauri::generate_context!())
         .expect("error while building KS Forge")

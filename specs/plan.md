@@ -3,7 +3,7 @@ type: Plan
 title: First version plan
 description: The plan for the suite's modern terminal for macOS and Windows: name, stack with reasons, the first version's features, what waits for later, languages, updates, packaging and the release steps.
 tags: [plan, terminal, stack, tauri, rust, pty, conpty, xterm, release]
-status: approved by the owner on 2026-11-24 (name KS Forge, Rust/Tauri stack)
+status: approved by the owner on 2026-11-24 (name KS Forge, Rust/Tauri stack); v0.1.0 built
 ---
 
 # First version plan
@@ -93,8 +93,17 @@ The suite's platform folders all exist: `tv/google-tv/`, `mobile/android/`, `mob
 
 1. **Owner:** pick the name *(done: KS Forge)* and approve this plan and the stack exception *(done, 2026-11-24)*.
 2. Rename the folder *(done)*, create the GitHub repository *(done)*, the owner sets the four signing secrets *(waiting)*; add the app to the workspace `.gitignore`, `CLAUDE.md`, `specs/platform-folders.md`, `specs/testing.md` and `specs/conventions.md`.
-3. Scaffold on `dev`: platform folders, Tauri app in `shared/`, ks-utility pinned, CLAUDE.md, graphify setup, CI.
-4. PTY core (Rust) with tests; one terminal in one window, on macOS.
-5. Tabs, splits, profiles, themes, settings screen and file, palette, search, links, clipboard, shell integration, English and Hindi, App updates.
-6. Measure speed (`docs/benchmarks.md`); Windows checks on CI; rehearsal of the release.
+3. Scaffold on `dev`: platform folders, Tauri app in `shared/`, ks-utility pinned, CLAUDE.md, graphify setup, CI. *(done)*
+4. PTY core (Rust) with tests; one terminal in one window, on macOS. *(done)*
+5. Tabs, splits, profiles, themes, settings screen and file, palette, search, links, clipboard, shell integration, English and Hindi, App updates. *(done)*
+6. Measure speed (`docs/benchmarks.md`); Windows checks on CI; rehearsal of the release. *(macOS measured)*
 7. `v0.1.0` released for the owner to test on macOS and Windows; feedback goes into the next versions, then `v1.0.0`.
+
+## Decisions while building v0.1.0
+
+- **Ligatures** come from our own character joiner for common programming sequences (`shared/src/lib/text.ts`), drawn by the WebGL renderer with the font's ligature. xterm.js's ligatures addon needs Node to read font files, so it cannot run in a web view.
+- **No background opacity or blur yet**: a transparent window needs Tauri's macOS private API, which the App Store and future signing may refuse. Later.
+- **Session restore** (reopening the last tabs) is left for a later version.
+- **Running-program check on close** works on macOS (the terminal's foreground process group); ConPTY does not report it, so Windows asks only when it can tell (it cannot yet).
+- **Self-test** (`KS_FORGE_SELFTEST=1`) drives the real window on CI for both systems, since Windows is tested on CI only.
+- The macOS menu has no Cmd+W "Close Window" (Cmd+W closes a pane) and Quit asks before closing running programs.
