@@ -30,6 +30,9 @@ These names match ks-utility's [app-update](https://github.com/kumarsumit17/ks-u
 - The four `ks-release` secrets are set on the repository (suite rule "signing first", 2026-11-24); this desktop-only app does not use them yet.
 
 ## Steps
+
+GitHub starts a workflow by hand only when its file is on the default branch, so for the very first release `main` was fast-forwarded to a green `dev` before the rehearsal (2026-11-24); from then on the order below holds.
+
 1. On `dev`: CI green; date the version's CHANGELOG section; run **Release** by hand with the version (rehearsal) and check it is green.
 2. Fast-forward `main` to `dev`, push, CI green on `main`.
 3. `git tag -a vX.Y.Z -m "vX.Y.Z"` on `main`, `git push origin vX.Y.Z`.

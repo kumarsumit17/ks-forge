@@ -98,15 +98,16 @@ jobs:
           node-version: "26"
           cache: npm
           cache-dependency-path: shared/package-lock.json
-      - run: node scripts/set-version.mjs "$KSF_TAG"
       - name: Install
         working-directory: shared
         run: npm ci
+      # Before the version is written: the release-script tests copy the unversioned files.
       - name: Tests
         run: |
           (cd shared && npm test && npm run test:lang)
           node --test scripts/test/
           (cd shared/src-tauri && cargo test --quiet)
+      - run: node scripts/set-version.mjs "$KSF_TAG"
       # Ad hoc signature (no Apple Developer ID yet: specs/plan.md, 8).
       - name: Build the app
         working-directory: shared
@@ -149,14 +150,15 @@ jobs:
           node-version: "26"
           cache: npm
           cache-dependency-path: shared/package-lock.json
-      - run: node scripts/set-version.mjs "$KSF_TAG"
       - name: Install
         working-directory: shared
         run: npm ci
+      # Before the version is written: the release-script tests copy the unversioned files.
       - name: Tests
         run: |
           (cd shared && npm test && npm run test:lang)
           (cd shared/src-tauri && cargo test --quiet)
+      - run: node scripts/set-version.mjs "$KSF_TAG"
       # Not Authenticode-signed yet (specs/plan.md, 8).
       - name: Build the installer
         working-directory: shared
