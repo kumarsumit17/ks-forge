@@ -48,6 +48,7 @@ export class Session {
   title = "";
   ptyId: number | null = null;
   exited = false;
+  private pendingInput = "";
   private fit = new FitAddon();
   private search = new SearchAddon();
   private webgl: WebglAddon | null = null;
@@ -107,7 +108,10 @@ export class Session {
         if (d === "\r") void this.restart();
         return;
       }
-      if (this.ptyId !== null) api.write(this.ptyId, d).catch((e) => this.events.error(e));
+      // Before the shell's id is known (ConPTY asks for the cursor position at once, and
+      // xterm.js answers it), input is kept and sent as soon as the shell has started.
+      if (this.ptyId === null) this.pendingInput += d;
+      else api.write(this.ptyId, d).catch((e) => this.events.error(e));
     });
     this.term.onTitleChange((t) => {
       this.title = t;
@@ -200,6 +204,7 @@ export class Session {
 
   private async start(): Promise<void> {
     this.exited = false;
+    this.pendingInput = "";
     this.prompts = [];
     try {
       this.ptyId = await api.spawn(
@@ -215,6 +220,11 @@ export class Session {
         (bytes) => this.term.write(bytes),
       );
       this.lastSize = { cols: this.term.cols, rows: this.term.rows };
+      if (this.pendingInput) {
+        const input = this.pendingInput;
+        this.pendingInput = "";
+        await api.write(this.ptyId, input).catch((e) => this.events.error(e));
+      }
       this.events.changed();
     } catch (e) {
       this.exited = true;
