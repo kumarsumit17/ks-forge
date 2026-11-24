@@ -30,6 +30,7 @@ function screenText(id: string): string {
 export async function runSelfTest(): Promise<void> {
   if (!(await invoke<boolean>("selftest_enabled"))) return;
   const steps: string[] = [];
+  let watched = "";
   const step = (s: string) => steps.push(s);
   try {
     const info = await api.appInfo();
@@ -38,8 +39,10 @@ export async function runSelfTest(): Promise<void> {
     // 1. The first tab's shell starts and runs a command.
     const first = app.tab!;
     const pane = first.active;
+    watched = pane;
     await until("shell started", () => app.sessions.get(pane)?.ptyId != null);
-    await until("first prompt", () => !!app.sessions.get(pane)!.cwd);
+    // A first PowerShell start on a fresh Windows machine can take a while.
+    await until("first prompt", () => !!app.sessions.get(pane)!.cwd, 60000);
     const firstPromptMs = await invoke<number>("app_uptime_ms");
     step(`renderer=${app.sessions.get(pane)!.renderer}`);
     const cmd = info.platform === "windows" ? "echo ksforge-%NUMBER_OF_PROCESSORS%x & echo ksforge-ok\r" : "echo ksforge-$((6*7))\r";
@@ -103,6 +106,10 @@ export async function runSelfTest(): Promise<void> {
 
     await invoke("selftest_report", { ok: true, report: steps.join(" | ") });
   } catch (e) {
-    await invoke("selftest_report", { ok: false, report: `${steps.join(" | ")} | ERROR ${e instanceof Error ? e.message : String(e)}` });
+    // What the first pane showed, to tell a slow shell from a missing prompt report.
+    const screen = watched ? JSON.stringify(screenText(watched).replace(/\n+$/, "").slice(-600)) : "";
+    const s = watched ? app.sessions.get(watched) : undefined;
+    const state = s ? `pty=${s.ptyId} exited=${s.exited} cwd=${JSON.stringify(s.cwd)} profile=${s.profile.program} ${s.profile.args.join(" ")}` : "";
+    await invoke("selftest_report", { ok: false, report: `${steps.join(" | ")} | ERROR ${e instanceof Error ? e.message : String(e)} | ${state} | screen=${screen}` });
   }
 }
