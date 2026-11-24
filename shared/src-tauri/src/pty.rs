@@ -229,7 +229,7 @@ mod tests {
         let tx2 = tx.clone();
         let code = Arc::new(Mutex::new(None));
         let code2 = Arc::clone(&code);
-        ptys.spawn(
+        let id = ptys.spawn(
             &spec,
             &ctx,
             move |b| {
@@ -242,11 +242,19 @@ mod tests {
         )
         .expect("spawn");
         let mut out = Vec::new();
+        let mut answered = false;
         while let Ok(Some(b)) = rx.recv_timeout(Duration::from_secs(20)) {
             out.extend(b);
+            // ConPTY asks for the cursor position at start and waits for the answer, as a
+            // terminal (xterm.js in the app) gives it.
+            if !answered && out.windows(4).any(|w| w == b"\x1b[6n") {
+                answered = true;
+                let _ = ptys.write(id, b"\x1b[1;1R");
+            }
         }
-        let c = code.lock().unwrap().expect("exit code");
-        (String::from_utf8_lossy(&out).into_owned(), c)
+        let text = String::from_utf8_lossy(&out).into_owned();
+        let c = code.lock().unwrap().unwrap_or_else(|| panic!("no exit reported; output so far: {text:?}"));
+        (text, c)
     }
 
     #[cfg(unix)]
