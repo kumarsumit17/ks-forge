@@ -19,6 +19,8 @@ use crate::msg;
 use crate::msg::Msg;
 
 const READ_CHUNK: usize = 64 * 1024;
+/// How long the last output may take to arrive after the program ended.
+const EXIT_GRACE: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// What to start in a pane: a profile's program, with its folder and variables.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -87,18 +89,24 @@ impl Ptys {
         });
         self.map.lock().expect("pty map").insert(id, session);
 
-        let reading = std::thread::Builder::new()
+        let (done_tx, done_rx) = std::sync::mpsc::channel::<()>();
+        std::thread::Builder::new()
             .name(format!("pty-read-{id}"))
-            .spawn(move || read_loop(reader, out))
+            .spawn(move || {
+                read_loop(reader, out);
+                let _ = done_tx.send(());
+            })
             .map_err(|e| msg!("error.spawn", program = &spec.program, detail = e))?;
         let ptys = Arc::clone(self);
         std::thread::Builder::new()
             .name(format!("pty-wait-{id}"))
             .spawn(move || {
                 let code = child.wait().map(|s| s.exit_code()).unwrap_or(1);
-                // Dropping the master closes the ConPTY on Windows, which ends the read.
+                // Dropping the master closes the ConPTY on Windows. The last output is read
+                // until the pipe ends, but ConPTY does not always end it, so the exit is
+                // reported after at most EXIT_GRACE either way.
                 ptys.map.lock().expect("pty map").remove(&id);
-                let _ = reading.join();
+                let _ = done_rx.recv_timeout(EXIT_GRACE);
                 exited(Exit { id, code });
             })
             .map_err(|e| msg!("error.spawn", program = &spec.program, detail = e))?;
