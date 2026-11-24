@@ -68,10 +68,7 @@ jobs:
         run: npm run tauri build -- --bundles app
       - name: Self-test of the built app (macOS)
         if: runner.os == 'macOS'
-        run: |
-          OUT=$(KS_FORGE_SELFTEST=1 timeout 180 "shared/src-tauri/target/release/bundle/macos/KS Forge.app/Contents/MacOS/ks-forge" 2>&1 || true)
-          echo "$OUT" | grep KS_FORGE_SELFTEST || true
-          echo "$OUT" | grep -q "KS_FORGE_SELFTEST PASS" || { echo "::error::self-test failed"; echo "$OUT" | tail -30; exit 1; }
+        run: node scripts/selftest.mjs "shared/src-tauri/target/release/bundle/macos/KS Forge.app/Contents/MacOS/ks-forge"
       - name: Build the installer (Windows)
         if: runner.os == 'Windows'
         working-directory: shared

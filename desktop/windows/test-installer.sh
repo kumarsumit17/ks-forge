@@ -17,9 +17,8 @@ for i in $(seq 1 60); do [ -f "$EXE" ] && break; sleep 1; done
 echo "installed: $EXE"
 
 echo "self-test of the installed copy"
-OUT=$(KS_FORGE_SELFTEST=1 timeout 180 "$EXE" 2>&1 || true)
-echo "$OUT" | grep "KS_FORGE_SELFTEST" || true
-echo "$OUT" | grep -q "KS_FORGE_SELFTEST PASS" || { echo "::error::self-test failed"; echo "$OUT" | tail -30; exit 1; }
+HERE=$(cd "$(dirname "$0")/../.." && pwd)
+node "$HERE/scripts/selftest.mjs" "$EXE" || { echo "::error::self-test failed"; exit 1; }
 
 echo "uninstalling"
 cmd //c "\"$(cygpath -w "$DIR/uninstall.exe")\" /S"

@@ -164,7 +164,12 @@ fn selftest_report(handle: AppHandle, ok: bool, report: String) {
     if !selftest_enabled() {
         return;
     }
-    println!("KS_FORGE_SELFTEST {} {report}", if ok { "PASS" } else { "FAIL" });
+    let line = format!("KS_FORGE_SELFTEST {} {report}", if ok { "PASS" } else { "FAIL" });
+    println!("{line}");
+    // A Windows release build has no console, so the result also goes to a file if asked.
+    if let Some(path) = std::env::var_os("KS_FORGE_SELFTEST_OUT") {
+        let _ = std::fs::write(path, format!("{line}\n"));
+    }
     handle.state::<App>().ptys.kill_all();
     handle.exit(if ok { 0 } else { 1 });
 }

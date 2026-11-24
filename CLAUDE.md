@@ -21,7 +21,7 @@ node --test scripts/test/                # release scripts
 cd shared/src-tauri && cargo test        # Rust tests
 cd shared/src-tauri && cargo clippy --all-targets -- -D warnings
 cd shared && npm run tauri build -- --bundles app      # macOS .app (nsis on Windows)
-KS_FORGE_SELFTEST=1 "shared/src-tauri/target/release/bundle/macos/KS Forge.app/Contents/MacOS/ks-forge"   # self-test
+node scripts/selftest.mjs "shared/src-tauri/target/release/bundle/macos/KS Forge.app/Contents/MacOS/ks-forge"   # self-test
 ```
 
 The self-test drives the real app (a shell, splits, tabs, themes, settings) and prints `KS_FORGE_SELFTEST PASS|FAIL ...`, with start-up and output-speed numbers; it uses a temporary settings folder. CI runs it on macOS and on the installed Windows copy.

@@ -23,8 +23,8 @@ test("the version goes into every file, and a second run changes nothing", () =>
     assert.equal(setVersion("v0.1.0", dir), "0.1.0");
     assert.equal(JSON.parse(readFileSync(join(dir, "shared/package.json"), "utf8")).version, "0.1.0");
     assert.equal(JSON.parse(readFileSync(join(dir, "shared/src-tauri/tauri.conf.json"), "utf8")).version, "0.1.0");
-    assert.match(readFileSync(join(dir, "shared/src-tauri/Cargo.toml"), "utf8"), /\nversion = "0\.1\.0"\n/);
-    assert.match(readFileSync(join(dir, "shared/src-tauri/Cargo.lock"), "utf8"), /name = "ks-forge"\nversion = "0\.1\.0"\n/);
+    assert.match(readFileSync(join(dir, "shared/src-tauri/Cargo.toml"), "utf8"), /\r?\nversion = "0\.1\.0"\r?\n/);
+    assert.match(readFileSync(join(dir, "shared/src-tauri/Cargo.lock"), "utf8"), /name = "ks-forge"\r?\nversion = "0\.1\.0"\r?\n/);
     assert.throws(() => setVersion("v0.1.1", dir));
   } finally {
     rmSync(dir, { recursive: true, force: true });

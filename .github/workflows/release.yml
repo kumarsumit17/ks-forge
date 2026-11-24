@@ -118,9 +118,7 @@ jobs:
           got=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$KSF_APP/Contents/Info.plist")
           [ "$got" = "$V" ] || { echo "::error::app version $got, expected $V"; exit 1; }
           codesign --verify --deep --strict "$KSF_APP"
-          OUT=$(KS_FORGE_SELFTEST=1 timeout 180 "$KSF_APP/Contents/MacOS/ks-forge" 2>&1 || true)
-          echo "$OUT" | grep KS_FORGE_SELFTEST || true
-          echo "$OUT" | grep -q "KS_FORGE_SELFTEST PASS" || { echo "::error::self-test failed"; echo "$OUT" | tail -30; exit 1; }
+          node scripts/selftest.mjs "$KSF_APP/Contents/MacOS/ks-forge"
       - name: Make the disk image
         run: |
           mkdir -p release
