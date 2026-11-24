@@ -5,7 +5,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { app } from "./app.ts";
 import { leaves } from "./layout.ts";
-import { api } from "./tauri.ts";
+import { api, ipcStats } from "./tauri.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -109,7 +109,7 @@ export async function runSelfTest(): Promise<void> {
     // What the first pane showed, to tell a slow shell from a missing prompt report.
     const screen = watched ? JSON.stringify(screenText(watched).replace(/\n+$/, "").slice(-600)) : "";
     const s = watched ? app.sessions.get(watched) : undefined;
-    const state = s ? `pty=${s.ptyId} exited=${s.exited} cwd=${JSON.stringify(s.cwd)} profile=${s.profile.program} ${s.profile.args.join(" ")}` : "";
+    const state = s ? `ipc=${JSON.stringify(ipcStats)} pty=${s.ptyId} exited=${s.exited} cwd=${JSON.stringify(s.cwd)} profile=${s.profile.program} ${s.profile.args.join(" ")}` : "";
     await invoke("selftest_report", { ok: false, report: `${steps.join(" | ")} | ERROR ${e instanceof Error ? e.message : String(e)} | ${state} | screen=${screen}` });
   }
 }

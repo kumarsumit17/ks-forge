@@ -23,12 +23,38 @@ export interface SpawnSpec {
   rows: number;
 }
 
+/** What arrived over the output channels, for the self-test's report. */
+export const ipcStats = { messages: 0, bytes: 0, firstType: "" };
+
+function describe(m: unknown): string {
+  if (m === null) return "null";
+  if (typeof m !== "object") return typeof m;
+  return Object.prototype.toString.call(m);
+}
+
+/** Raw channel data arrives as an ArrayBuffer in WebKit; other web views may hand a typed
+ *  array, a plain array of numbers, or an object with numbered keys. */
+export function toBytes(m: unknown): Uint8Array {
+  if (m instanceof ArrayBuffer || Object.prototype.toString.call(m) === "[object ArrayBuffer]") return new Uint8Array(m as ArrayBuffer);
+  if (ArrayBuffer.isView(m)) return new Uint8Array(m.buffer, m.byteOffset, m.byteLength);
+  if (Array.isArray(m)) return Uint8Array.from(m as number[]);
+  if (typeof m === "string") return new TextEncoder().encode(m);
+  if (m && typeof m === "object") return Uint8Array.from(Object.values(m as Record<string, number>));
+  return new Uint8Array();
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
   shells: () => invoke<FoundShell[]>("shells_detect"),
   spawn(spec: SpawnSpec, onData: (bytes: Uint8Array) => void): Promise<number> {
-    const output = new Channel<ArrayBuffer | number[]>();
-    output.onmessage = (m) => onData(m instanceof ArrayBuffer ? new Uint8Array(m) : Uint8Array.from(m));
+    const output = new Channel<unknown>();
+    output.onmessage = (m) => {
+      const bytes = toBytes(m);
+      ipcStats.messages++;
+      ipcStats.bytes += bytes.length;
+      if (!ipcStats.firstType) ipcStats.firstType = describe(m);
+      onData(bytes);
+    };
     return invoke<number>("pty_spawn", { spec, output });
   },
   write: (id: number, data: string) => invoke<void>("pty_write", { id, data }),
