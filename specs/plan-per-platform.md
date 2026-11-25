@@ -1,13 +1,13 @@
 ---
 type: Plan
 title: Per-platform optimization plan
-description: Approved plan for making each KS Forge build (macOS, Windows) its own app with its own version, tuned to its OS for look, input, performance, packaging, OS integrations and accessibility.
+description: Approved plan for the KS Forge builds for macOS and Windows: one version for both builds, each tuned to its OS for look, input, performance, packaging, OS integrations and accessibility.
 tags: [plan, platforms, macos, windows, accessibility, performance]
 ---
 
 # Per-platform optimization plan
 
-**Status: approved by the owner on 2026-11-25.** Decisions: 1 one version for both (also the suite rule); 2 (a) tabs in the Windows title bar; 3 all three dependencies (single instance, notifications, jump list); 4 yes, background blur on macOS (a setting, off by default). Not asked, so the defaults hold: 5 Apple silicon and x64 only; 6 unsigned until the owner has certificates; 7 the owner's Windows hand check after step 4. Built steps are marked in section 4. The suite rule: every platform build is its own app with its own version, the best it can be on its OS ([Platform folders](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/platform-folders.md)). Modelled on ks-jaiplayer's plan.
+**Status: approved by the owner on 2026-11-25.** Decisions: 1 one version for both (also the suite rule); 2 (a) tabs in the Windows title bar; 3 all three dependencies (single instance, notifications, jump list); 4 yes, background blur on macOS (a setting, off by default). Not asked, so the defaults hold: 5 Apple silicon and x64 only; 6 unsigned until the owner has certificates; 7 the owner's Windows hand check after step 4. Built steps are marked in section 4. The suite rule: one version for both builds, each tuned to its OS and the best it can be there ([Platform folders](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/platform-folders.md)). Modelled on ks-jaiplayer's plan.
 
 KS Forge targets macOS and Windows only (`tv/google-tv`, `mobile/*` stay empty). The terminal core stays written once in `shared/`: the Rust PTY layer, settings, shell integration and the React and xterm.js interface. What differs per OS moves to its platform folder: Tauri config overrides (already there) and, new, platform-only Rust in `desktop/mac/src/` and `desktop/windows/src/`, compiled into the one crate with `#[cfg(target_os)]` and `#[path]`, so `shared/` keeps no code for one platform only.
 

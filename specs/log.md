@@ -1,6 +1,6 @@
 # 2026-11-25
 
-* **Update**: [Per-platform optimization plan](plan-per-platform.md): versioning follows the suite rule (one `vX.Y.Z` for both builds); the platform-tag option and bridge release are removed.
+* **Update**: [Per-platform optimization plan](plan-per-platform.md): versioning follows the suite rule (one `vX.Y.Z` for both builds); the platform-tag option and bridge release are removed; the description now says one version for both builds, each tuned to its OS.
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) steps 3 (macOS) and 4 (Windows) built; [Settings file](settings-file.md): `optionAsMeta`, `secureKeyboardEntry`, `ctrlCCopies`, `ctrlVPastes`, `backgroundBlur`, `backgroundOpacity`, `notifyLongCommands`, `screenReaderMode`, `runAsAdmin`; [Dependencies](dependencies.md): tauri-plugin-notification, tauri-plugin-single-instance (Windows), windows (Windows), objc2 crates (macOS), all but the plugins already in the tree.
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) step 2 built: several windows, session restore, command-line folder and profile, platform-only Rust in the platform folders. [Settings file](settings-file.md): `restoreSession`.
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) approved: one version for both, tabs in the Windows title bar, single instance + notifications + jump list, macOS background blur; Apple silicon and x64 only, unsigned for now.
