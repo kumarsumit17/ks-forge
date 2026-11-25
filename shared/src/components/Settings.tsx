@@ -127,6 +127,9 @@ function General() {
       <Row label={t("settings.newTabsInCurrentFolder")} hint={t("settings.newTabsInCurrentFolderHint")}>
         <Switch label={t("settings.newTabsInCurrentFolder")} checked={s.newTabsInCurrentFolder} onChange={(v) => set({ newTabsInCurrentFolder: v })} />
       </Row>
+      <Row label={t("settings.restoreSession")} hint={t("settings.restoreSessionHint")}>
+        <Switch label={t("settings.restoreSession")} checked={s.restoreSession} onChange={(v) => set({ restoreSession: v })} />
+      </Row>
       <Row label={t("settings.confirmClose")} hint={platform === "macos" ? t("settings.confirmCloseHint") : t("settings.confirmCloseHintWindows")}>
         <Switch label={t("settings.confirmClose")} checked={s.confirmClose} onChange={(v) => set({ confirmClose: v })} />
       </Row>

@@ -131,6 +131,7 @@ export function display(binding: string, platform: Platform): string {
 /** The actions that can have a shortcut. Their names are keys of the language files ("action.<id>"). */
 export const ACTIONS = [
   "newTab",
+  "newWindow",
   "closePane",
   "closeTab",
   "splitRight",
@@ -188,6 +189,7 @@ export function isAction(s: string): s is ActionId {
 
 const MAC: Partial<Record<ActionId, string>> = {
   newTab: "cmd+t",
+  newWindow: "cmd+n",
   closePane: "cmd+w",
   closeTab: "shift+cmd+w",
   splitRight: "cmd+d",
@@ -225,6 +227,7 @@ const MAC: Partial<Record<ActionId, string>> = {
 
 const WIN: Partial<Record<ActionId, string>> = {
   newTab: "ctrl+shift+t",
+  newWindow: "ctrl+shift+n",
   closePane: "ctrl+shift+w",
   closeTab: "ctrl+alt+shift+w",
   splitRight: "ctrl+shift+d",

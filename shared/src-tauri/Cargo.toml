@@ -17,7 +17,8 @@ crate-type = ["rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# macos-private-api: transparent windows for the background blur (plan-per-platform 2.1).
+tauri = { version = "2", features = ["macos-private-api"] }
 # First-party shared utilities (KS-Suite), pinned to one tag; see CLAUDE.md.
 ks-utility = { git = "https://github.com/kumarsumit17/ks-utility", tag = "v0.9.0" }
 serde = { version = "1", features = ["derive"] }

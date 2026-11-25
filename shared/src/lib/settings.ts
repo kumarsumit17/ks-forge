@@ -49,6 +49,8 @@ export interface Settings {
   rightClickPaste: boolean;
   optionIsMeta: boolean;
   newTabsInCurrentFolder: boolean;
+  /** Reopen the windows, tabs and folders of the last run at start. */
+  restoreSession: boolean;
   showTabIcons: boolean;
   defaultProfile: string;
   profiles: Profile[];
@@ -142,6 +144,7 @@ export function defaults(platform: Platform): Settings {
     rightClickPaste: platform === "windows",
     optionIsMeta: false,
     newTabsInCurrentFolder: true,
+    restoreSession: true,
     showTabIcons: true,
     defaultProfile: "",
     profiles: [],
@@ -227,7 +230,7 @@ export function normalize(raw: unknown, found: FoundShell[], platform: Platform)
   take("cursorBlink", isBool);
   take("padding", inRange(...LIMITS.padding), (v) => Math.round(v as number));
   take("scrollback", inRange(...LIMITS.scrollback), (v) => Math.round(v as number));
-  for (const k of ["copyOnSelect", "confirmPaste", "confirmClose", "rightClickPaste", "optionIsMeta", "newTabsInCurrentFolder", "showTabIcons", "autoUpdate"] as const) {
+  for (const k of ["copyOnSelect", "confirmPaste", "confirmClose", "rightClickPaste", "optionIsMeta", "newTabsInCurrentFolder", "restoreSession", "showTabIcons", "autoUpdate"] as const) {
     take(k, isBool);
   }
   take("defaultProfile", isStr);

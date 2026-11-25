@@ -38,6 +38,7 @@ One `settings.json`, in the app's config folder: `~/Library/Application Support/
 | `rightClickPaste` | Windows `true`, macOS `false` | right-click copies a selection or pastes; off shows a menu |
 | `optionIsMeta` | `false` | macOS only |
 | `newTabsInCurrentFolder` | `true` | needs shell integration |
+| `restoreSession` | `true` | reopen the windows, tabs and folders of the last run (`session.json` beside the app's data) |
 | `showTabIcons` | `true` | |
 | `defaultProfile` | the login shell (macOS) or the first found | profile id |
 | `profiles` | the shells found | `id`, `name`, `program`, `args`, `cwd`, `env`, `icon`, `theme`, `shellIntegration` |

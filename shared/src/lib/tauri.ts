@@ -2,6 +2,7 @@
 
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { FoundShell } from "./settings.ts";
 import type { Platform } from "./keys.ts";
 
@@ -11,6 +12,13 @@ export interface AppInfo {
   home: string;
   settingsPath: string;
   repo: string;
+}
+
+/** What a window was opened with (src-tauri/src/wins.rs). */
+export interface WindowRequest {
+  cwd: string | null;
+  profile: string | null;
+  layout: unknown;
 }
 
 export interface SpawnSpec {
@@ -61,6 +69,11 @@ export const api = {
   resize: (id: number, cols: number, rows: number) => invoke<void>("pty_resize", { id, cols, rows }),
   kill: (id: number) => invoke<void>("pty_kill", { id }),
   busy: (ids: number[]) => invoke<number[]>("pty_busy", { ids }),
+  busyAny: () => invoke<boolean>("pty_busy_any"),
+  windowRequest: () => invoke<WindowRequest>("window_request"),
+  newWindow: (cwd?: string, profile?: string) => invoke<string>("window_new", { cwd: cwd || null, profile: profile || null }),
+  saveSession: (layout: unknown) => invoke<void>("session_save", { layout }),
+  quitApp: () => invoke<void>("app_quit"),
   readSettings: () => invoke<string | null>("settings_read"),
   writeSettings: (text: string) => invoke<void>("settings_write", { text }),
   openSettingsFile: () => invoke<void>("settings_open_file"),
@@ -80,6 +93,12 @@ export function onSettingsFile(f: (text: string) => void): Promise<UnlistenFn> {
   return listen<string>("settings-file-changed", (e) => f(e.payload));
 }
 
+/** Menu commands go to the window in front only. */
 export function onMenu(f: (id: string) => void): Promise<UnlistenFn> {
-  return listen<string>("menu-action", (e) => f(e.payload));
+  return getCurrentWebviewWindow().listen<string>("menu-action", (e) => f(e.payload));
+}
+
+/** Another window changed the settings. */
+export function onSettingsSynced(f: (text: string) => void): Promise<UnlistenFn> {
+  return listen<string>("settings-synced", (e) => f(e.payload));
 }

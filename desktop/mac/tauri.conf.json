@@ -1,18 +1,7 @@
 {
-  "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "KS Forge",
-        "width": 1100,
-        "height": 700,
-        "minWidth": 480,
-        "minHeight": 300,
-        "visible": false,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "trafficLightPosition": { "x": 14, "y": 19 }
-      }
-    ]
+  "bundle": {
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
   }
 }

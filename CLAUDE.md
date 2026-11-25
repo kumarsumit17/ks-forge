@@ -6,7 +6,7 @@ KS Forge: a fast, private terminal for macOS and Windows, with tabs, split panes
 - Targets: `desktop/mac` (Apple silicon) and `desktop/windows` (x64, Windows 10 1809 or later). Other platform folders hold only a `.gitkeep`.
 - **Rust + Tauri 2 + TypeScript/React**, the suite's second exception to the Kotlin rule, approved by the owner on 2026-11-24 (`specs/plan.md`). The Kotlin, Gradle and package-root rules do not apply. Bundle identifier: `com.ks.forge`.
 - Terminal grid: xterm.js with its WebGL renderer. PTY on macOS and ConPTY on Windows through `portable-pty`. Interface: React with our own CSS (no UI kit) and Lucide icons.
-- One Tauri codebase builds both systems, so it lives in `shared/` (`shared/src/` interface, `shared/src-tauri/` Rust). `desktop/mac/` and `desktop/windows/` hold only what is specific to one system: Tauri config overrides (added by `scripts/tauri.mjs`), the dmg script, the installer test.
+- One Tauri codebase builds both systems, so it lives in `shared/` (`shared/src/` interface, `shared/src-tauri/` Rust). `desktop/mac/` and `desktop/windows/` hold only what is specific to one system: Tauri config overrides (added by `scripts/tauri.mjs`), the dmg script, the installer test, and platform-only Rust in `desktop/<os>/src/platform.rs`, compiled into the one crate through `#[path]` in `shared/src-tauri/src/lib.rs`.
 - Toolchain: Rust 1.100 (`rust-toolchain.toml`), Node 26 / npm 11. Tauri 2.12, React 19.3, TypeScript 6.0, Vite 8.3, xterm.js 6.0.
 - Version placeholder: `0.0.0` in `shared/src-tauri/Cargo.toml` (the Tauri CLI needs the field). Release builds write the tag's version with `scripts/set-version.mjs`.
 

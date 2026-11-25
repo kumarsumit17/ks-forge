@@ -5,12 +5,13 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createUpdateStore, type CheckResult, type Opened, type UpdateStore } from "ks-utility";
-import { api, onMenu, onPtyExit, onSettingsFile, type AppInfo } from "./tauri.ts";
+import { api, onMenu, onPtyExit, onSettingsFile, onSettingsSynced, type AppInfo } from "./tauri.ts";
 import { activeThemeId, LIMITS, normalize, parseFile, serialize, type FoundShell, type Profile, type Settings } from "./settings.ts";
 import { BUILT_IN_THEMES, DEFAULT_DARK, findTheme, type Theme } from "./themes.ts";
 import * as L from "./layout.ts";
 import { bindingTable, fromEvent, isAction, type ActionId, type Platform } from "./keys.ts";
 import { Session } from "./session.ts";
+import { parseLayout, renameLeaves, type SavedLayout, type SavedPane } from "./layoutStore.ts";
 import { baseName, pasteWarning } from "./text.ts";
 import { errorText, isMsg, setLanguage, t, type TextKey } from "./i18n.ts";
 
@@ -168,16 +169,21 @@ export class App {
     window.addEventListener("keydown", (e) => this.onKey(e), true);
     void onPtyExit(({ id, code }) => this.byPty.get(id)?.handleExit(code));
     void onSettingsFile((text) => this.onSettingsFileChanged(text));
+    void onSettingsSynced((text) => this.onSettingsFileChanged(text, false));
     void onMenu((id) => {
       if (isAction(id)) void this.run(id);
     });
     void getCurrentWindow().onCloseRequested(async (e) => {
       e.preventDefault();
-      await this.quit();
+      await this.closeWindow();
     });
 
-    this.newTab();
+    const request = await api.windowRequest().catch(() => null);
+    if (!(request?.layout && this.restore(request.layout))) {
+      this.newTab(request?.profile ?? undefined, request?.cwd ?? undefined);
+    }
     this.set({ ready: true });
+    this.subscribe(() => this.scheduleSessionSave());
     void getCurrentWindow().show();
     this.scheduleUpdateChecks();
   }
@@ -238,7 +244,7 @@ export class App {
     }, 250);
   }
 
-  private onSettingsFileChanged(text: string): void {
+  private onSettingsFileChanged(text: string, toast = true): void {
     const raw = parseFile(text);
     if (raw === null) {
       this.set({ fileBroken: true });
@@ -250,7 +256,7 @@ export class App {
     this.set({ settings, problems, fileBroken: false });
     this.applyChrome();
     this.applySettingsToSessions();
-    this.showToast(t("toast.settingsReloaded"));
+    if (toast) this.showToast(t("toast.settingsReloaded"));
   }
 
   private applySettingsToSessions(): void {
@@ -323,13 +329,13 @@ export class App {
     return this.state.settings.newTabsInCurrentFolder ? (this.session?.cwd ?? "") : "";
   }
 
-  newTab(profileId?: string): void {
+  newTab(profileId?: string, cwd?: string): void {
     const profile = this.profile(profileId);
     if (!profile) {
       this.showToast(t("error.noProfile"));
       return;
     }
-    const session = this.makeSession(profile, this.currentFolder());
+    const session = this.makeSession(profile, cwd ?? this.currentFolder());
     const tab: Tab = { id: newId("t"), root: L.leaf(session.id), active: session.id, zoomed: null, title: "", icon: profile.icon, color: "" };
     this.set({ tabs: [...this.state.tabs, tab], activeTab: tab.id, searching: false });
     this.focusSoon();
@@ -476,12 +482,74 @@ export class App {
     return this.confirm({ title: t("confirm.closeTitle"), body: t("confirm.closeBody"), ok: t("confirm.closeOk"), danger: true });
   }
 
-  async quit(): Promise<void> {
+  /** Closes this window, asking first when a program is running in one of its panes. */
+  async closeWindow(): Promise<void> {
     const all = [...this.sessions.values()];
     if (!(await this.confirmClose(all))) return;
     for (const s of all) s.kill();
     await getCurrentWindow().destroy();
   }
+
+  /** Quits the app: every window, asking first when a program is running in any of them. */
+  async quit(): Promise<void> {
+    if (this.state.settings.confirmClose && (await api.busyAny().catch(() => false))) {
+      const ok = await this.confirm({ title: t("confirm.closeTitle"), body: t("confirm.quitBody"), ok: t("confirm.quitOk"), danger: true });
+      if (!ok) return;
+    }
+    await this.saveSessionNow();
+    await api.quitApp();
+  }
+
+  // ----- Session restore -----
+
+  private sessionTimer = 0;
+
+  private scheduleSessionSave(): void {
+    clearTimeout(this.sessionTimer);
+    this.sessionTimer = window.setTimeout(() => void this.saveSessionNow(), 600);
+  }
+
+  /** This window's layout: tabs, panes with their profile and folder, titles and looks. */
+  layout(): SavedLayout {
+    const panes: Record<string, SavedPane> = {};
+    for (const [id, s] of this.sessions) panes[id] = { profile: s.profile.id, cwd: s.cwd };
+    return {
+      version: 1,
+      activeTab: Math.max(0, this.state.tabs.findIndex((x) => x.id === this.state.activeTab)),
+      tabs: this.state.tabs.map((x) => ({ root: x.root, active: x.active, title: x.title, icon: x.icon, color: x.color })),
+      panes,
+    };
+  }
+
+  private async saveSessionNow(): Promise<void> {
+    if (!this.state.ready || this.state.tabs.length === 0) return;
+    await api.saveSession(this.layout()).catch(() => {});
+  }
+
+  /** Rebuilds a saved layout with new shells in the saved folders. False when it is unusable. */
+  restore(raw: unknown): boolean {
+    const saved = parseLayout(raw);
+    if (!saved) return false;
+    const tabs: Tab[] = [];
+    for (const st of saved.tabs) {
+      const ids = new Map<string, string>();
+      for (const old of L.leaves(st.root)) {
+        const pane = saved.panes[old];
+        const profile = this.profile(pane?.profile);
+        if (!profile) continue;
+        ids.set(old, this.makeSession(profile, pane?.cwd ?? "").id);
+      }
+      const root = renameLeaves(st.root, ids, () => newId("s"));
+      if (!root) continue;
+      const leaves = L.leaves(root);
+      tabs.push({ id: newId("t"), root, active: ids.get(st.active) ?? leaves[0], zoomed: null, title: st.title, icon: st.icon, color: st.color });
+    }
+    if (tabs.length === 0) return false;
+    this.set({ tabs, activeTab: tabs[Math.min(saved.activeTab, tabs.length - 1)].id });
+    this.focusSoon();
+    return true;
+  }
+
 
   /** The title a tab shows. */
   tabTitle(tab: Tab): string {
@@ -626,6 +694,7 @@ export class App {
     }
     switch (action) {
       case "newTab": return this.newTab();
+      case "newWindow": return void api.newWindow(this.currentFolder()).catch((e) => this.showToast(errorText(e)));
       case "closePane": return tab ? this.closePane(tab.active) : undefined;
       case "closeTab": return this.closeTab();
       case "splitRight": return this.split("row");

@@ -6,6 +6,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { app } from "./app.ts";
 import { leaves } from "./layout.ts";
 import { api, ipcStats } from "./tauri.ts";
+import { getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
+import { parseLayout } from "./layoutStore.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -99,7 +101,23 @@ export async function runSelfTest(): Promise<void> {
     if (app.sessions.get(pane)!.term.options.fontSize !== 15) throw new Error("font size not applied");
     step("themes and settings ok");
 
-    // 5. Closing a pane gives its space back.
+    // 5. Windows: a second window opens with its own tabs, and closes again.
+    const before = (await getAllWebviewWindows()).length;
+    const label = await api.newWindow();
+    await until("second window", async () => (await getAllWebviewWindows()).length === before + 1);
+    const second2 = (await getAllWebviewWindows()).find((w) => w.label === label);
+    await sleep(1500);
+    await second2?.destroy();
+    await until("second window closed", async () => (await getAllWebviewWindows()).length === before);
+    step("windows ok");
+
+    // 6. The layout saved for session restore reads back with every pane's profile and folder.
+    const saved = parseLayout(JSON.parse(JSON.stringify(app.layout())));
+    if (!saved || saved.tabs.length !== app.state.tabs.length) throw new Error("layout did not read back");
+    if (saved.panes[pane]?.cwd !== app.sessions.get(pane)!.cwd) throw new Error("layout lost a folder");
+    step("session layout ok");
+
+    // 7. Closing a pane gives its space back.
     await app.closePane(panes[2], true);
     if (leaves(app.tab!.root).length !== 2) throw new Error("close pane failed");
     step("close pane ok");

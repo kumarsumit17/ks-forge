@@ -186,5 +186,11 @@
   "about.privacy": "Free, with no ads, no analytics and no account. The only request the app makes by itself is the daily update check, which you can turn off.",
   "about.licence": "MIT licence. Built with Tauri, xterm.js, portable-pty, React and Lucide.",
   "about.source": "Source code",
-  "about.notices": "Third-party licences"
+  "about.notices": "Third-party licences",
+  "action.newWindow": "New window",
+  "confirm.quitBody": "A program is still running in one of the windows. Quitting stops it, and anything it has not saved is lost.",
+  "confirm.quitOk": "Quit",
+  "settings.restoreSession": "Reopen windows and tabs",
+  "settings.restoreSessionHint": "At start, the windows, tabs and folders of the last time come back. Programs start fresh.",
+  "error.window": "Could not open a window: {detail}."
 }

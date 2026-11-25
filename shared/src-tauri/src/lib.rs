@@ -5,10 +5,28 @@
 mod integration;
 pub mod msg;
 mod pty;
+mod session_store;
 mod settings;
 mod shells;
 mod system;
 mod updates;
+mod wins;
+
+// Code for one system lives in its platform folder (KS-Suite specs/platform-folders.md).
+#[cfg(target_os = "macos")]
+#[path = "../../../desktop/mac/src/platform.rs"]
+mod platform;
+#[cfg(windows)]
+#[path = "../../../desktop/windows/src/platform.rs"]
+mod platform;
+#[cfg(not(any(target_os = "macos", windows)))]
+mod platform {
+    pub fn window_builder<'a, M: tauri::Manager<tauri::Wry>>(
+        b: tauri::WebviewWindowBuilder<'a, tauri::Wry, M>,
+    ) -> tauri::WebviewWindowBuilder<'a, tauri::Wry, M> {
+        b
+    }
+}
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,6 +39,8 @@ use crate::msg::Msg;
 
 struct App {
     ptys: Arc<pty::Ptys>,
+    windows: wins::Windows,
+    session: session_store::SessionStore,
     settings: Arc<settings::SettingsFile>,
     updater: updates::Updater,
     home: PathBuf,
@@ -96,14 +116,50 @@ fn pty_busy(app: State<App>, ids: Vec<u32>) -> Vec<u32> {
     app.ptys.busy(&ids)
 }
 
+/// Whether any window has a program running in front, for Quit.
+#[tauri::command]
+fn pty_busy_any(app: State<App>) -> bool {
+    !app.ptys.busy(&app.ptys.ids()).is_empty()
+}
+
+#[tauri::command]
+fn window_request(window: tauri::WebviewWindow, app: State<App>) -> wins::Request {
+    app.windows.take(window.label())
+}
+
+#[tauri::command]
+fn window_new(handle: AppHandle, app: State<App>, cwd: Option<String>, profile: Option<String>) -> Result<String, Msg> {
+    app.windows.open(&handle, wins::Request { cwd, profile, layout: None }).map_err(|e| msg!("error.window", detail = e))
+}
+
+#[tauri::command]
+fn session_save(window: tauri::WebviewWindow, app: State<App>, layout: serde_json::Value) {
+    app.session.save(window.label(), layout);
+}
+
+/// Quit, after the interface asked about running programs: every window's layout is kept.
+#[tauri::command]
+fn app_quit(handle: AppHandle, app: State<App>) {
+    app.session.quitting();
+    app.ptys.kill_all();
+    handle.exit(0);
+}
+
 #[tauri::command]
 fn settings_read(app: State<App>) -> Option<String> {
     app.settings.read()
 }
 
+/// Writes the settings and tells the other windows, which apply them too.
 #[tauri::command]
-fn settings_write(app: State<App>, text: String) -> Result<(), Msg> {
-    app.settings.write(&text).map_err(|e| msg!("error.settingsWrite", detail = e))
+fn settings_write(window: tauri::WebviewWindow, app: State<App>, text: String) -> Result<(), Msg> {
+    app.settings.write(&text).map_err(|e| msg!("error.settingsWrite", detail = e))?;
+    let from = window.label().to_string();
+    let _ = window.app_handle().emit_filter("settings-synced", text, |t| match t {
+        tauri::EventTarget::WebviewWindow { label } | tauri::EventTarget::Window { label } | tauri::EventTarget::Webview { label } => label != &from,
+        _ => false,
+    });
+    Ok(())
 }
 
 #[tauri::command]
@@ -197,12 +253,44 @@ fn menu(handle: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
         .item(&PredefinedMenuItem::copy(handle, None)?)
         .item(&PredefinedMenuItem::paste(handle, None)?)
         .build()?;
+    let new_window = MenuItemBuilder::with_id("newWindow", "New Window").accelerator("CmdOrCtrl+N").build(handle)?;
     let window = SubmenuBuilder::new(handle, "Window")
+        .item(&new_window)
+        .separator()
         .item(&PredefinedMenuItem::minimize(handle, None)?)
         .item(&PredefinedMenuItem::maximize(handle, None)?)
         .item(&PredefinedMenuItem::fullscreen(handle, None)?)
         .build()?;
     MenuBuilder::new(handle).items(&[&app_menu, &edit, &window]).build()
+}
+
+/// "Reopen windows and tabs" (`restoreSession` in settings.json), on unless set to false.
+fn restore_enabled(settings_text: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(settings_text)
+        .ok()
+        .and_then(|v| v.get("restoreSession").and_then(serde_json::Value::as_bool))
+        .unwrap_or(true)
+}
+
+/// At start: a folder or profile from the command line opens one window for it; otherwise
+/// the windows of the last run come back (when on), or one new window.
+fn open_first_windows(handle: &AppHandle, restore: bool) {
+    let app = handle.state::<App>();
+    let args: Vec<String> = std::env::args().collect();
+    let mut requests = Vec::new();
+    if let Some(r) = wins::request_from_args(&args) {
+        requests.push(r);
+    } else if restore && !selftest_enabled() {
+        requests.extend(app.session.load().into_iter().map(|layout| wins::Request { layout: Some(layout), ..Default::default() }));
+    }
+    if requests.is_empty() {
+        requests.push(wins::Request::default());
+    }
+    for r in requests {
+        if let Err(e) = app.windows.open(handle, r) {
+            eprintln!("could not open a window: {e}");
+        }
+    }
 }
 
 pub fn run() {
@@ -228,8 +316,11 @@ pub fn run() {
             Arc::clone(&settings).watch(move |text| {
                 let _ = watch_handle.emit("settings-file-changed", text);
             });
+            let restore = settings.read().as_deref().map(restore_enabled).unwrap_or(true);
             app.manage(App {
                 ptys: Arc::new(pty::Ptys::default()),
+                windows: wins::Windows::default(),
+                session: session_store::SessionStore::new(&data_dir),
                 settings,
                 updater: updates::Updater::new(version.clone(), &data_dir),
                 home,
@@ -240,10 +331,23 @@ pub fn run() {
             {
                 app.set_menu(menu(&handle)?)?;
                 app.on_menu_event(|app, event| {
-                    let _ = app.emit("menu-action", event.id().0.as_str());
+                    // Menu commands act on the window in front.
+                    if let Some(w) = wins::front(app) {
+                        let _ = w.emit_to(w.label(), "menu-action", event.id().0.as_str());
+                    } else if event.id().0 == "newWindow" {
+                        let _ = app.state::<App>().windows.open(app, wins::Request::default());
+                    }
                 });
             }
+            open_first_windows(&handle, restore);
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                let app = window.app_handle();
+                let last = app.webview_windows().is_empty();
+                app.state::<App>().session.closed(window.label(), last);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
@@ -262,6 +366,11 @@ pub fn run() {
             update_due,
             update_check,
             update_install,
+            pty_busy_any,
+            window_request,
+            window_new,
+            session_save,
+            app_quit,
             selftest_enabled,
             selftest_report,
             app_uptime_ms,

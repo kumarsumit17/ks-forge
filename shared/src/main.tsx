@@ -17,6 +17,8 @@ app
   .start()
   .then(runSelfTest)
   .catch((e) => {
+    // In the self-test a start-up error is its result (CI shows it).
+    void import("@tauri-apps/api/core").then(({ invoke }) => invoke("selftest_report", { ok: false, report: `start-up failed: ${errorText(e)}` }));
   document.body.textContent = errorText(e);
   console.error(e);
 });

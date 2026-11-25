@@ -93,4 +93,7 @@ Each step is one or more commits on `dev`, tested on its platform before the nex
 | 4 | Windows: title bar (decision 2), Ctrl+C/V, running-program check, Explorer menu and command line, (single instance), (jump list), administrator profiles, start-up hint, Narrator mode | `desktop/windows/` | CI: unit tests, installer install/self-test/uninstall (checks the registry keys and the busy check); owner's hand check |
 | 5 | Accessibility and Hindi pass on both | `shared/`, both folders | VoiceOver (Mac); Narrator by the owner |
 
+**Built so far:**
+- Step 2 (2026-11-25): platform-only Rust in `desktop/mac/src/platform.rs` and `desktop/windows/src/platform.rs`; several windows (⌘N / Ctrl+Shift+N, Window › New Window), each with its own tabs, settings kept in step between them; Quit asks once for all windows, closing a window only for its own panes; session restore (`restoreSession`, on by default) reopens windows, tabs, splits, folders, titles and tab looks; `-d <folder>` and `-p <profile>` on the command line. Windows are shown at once with a dark background (a never-shown window sometimes did not load its page). Self-test: a second window opens and closes; the saved layout reads back. Session-per-window settings section ("This device") comes with the first item that needs it.
+
 Windows cannot be run from this Mac, so step 4 is checked by CI (the self-test drives the installed app) and the owner's hand check.

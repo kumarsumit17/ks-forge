@@ -138,6 +138,10 @@ impl Ptys {
         }
     }
 
+    pub fn ids(&self) -> Vec<u32> {
+        self.map.lock().map(|m| m.keys().copied().collect()).unwrap_or_default()
+    }
+
     pub fn kill_all(&self) {
         let ids: Vec<u32> = self.map.lock().map(|m| m.keys().copied().collect()).unwrap_or_default();
         for id in ids {
