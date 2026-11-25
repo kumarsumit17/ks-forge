@@ -15,6 +15,7 @@ if (!exe) {
 }
 const dir = mkdtempSync(join(tmpdir(), "ksforge-selftest-"));
 const resultFile = join(dir, "result.txt");
+const started = Date.now();
 const child = spawn(exe, [], { env: { ...process.env, KS_FORGE_SELFTEST: "1", KS_FORGE_SELFTEST_OUT: resultFile }, stdio: ["ignore", "pipe", "pipe"] });
 let out = "";
 child.stdout.on("data", (d) => (out += d));
@@ -28,7 +29,7 @@ child.on("error", (e) => {
   console.error(`could not start ${exe}: ${e.message}`);
   process.exit(1);
 });
-child.on("close", () => {
+child.on("close", (code, signal) => {
   clearTimeout(timer);
   try {
     out += "\n" + readFileSync(resultFile, "utf8");
@@ -41,7 +42,7 @@ child.on("close", () => {
     console.log(line);
     process.exit(0);
   }
-  console.error(line ?? "no self-test result");
+  console.error(line ?? `no self-test result (exit code ${code}, signal ${signal}, after ${Date.now() - started} ms)`);
   console.error(out.split(/\r?\n/).slice(-30).join("\n"));
   process.exit(1);
 });

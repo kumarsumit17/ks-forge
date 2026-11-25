@@ -361,6 +361,16 @@ fn open_first_windows(handle: &AppHandle, restore: bool) {
 
 pub fn run() {
     let _ = START.set(std::time::Instant::now());
+    // In the self-test a panic is its result: a Windows release build has no console.
+    if selftest_enabled() {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if let Some(path) = std::env::var_os("KS_FORGE_SELFTEST_OUT") {
+                let _ = std::fs::write(path, format!("KS_FORGE_SELFTEST FAIL panic: {info}\n"));
+            }
+            previous(info);
+        }));
+    }
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default();
     // Windows: a second launch (Explorer's "Open in KS Forge", the jump list, a shortcut)
