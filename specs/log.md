@@ -1,3 +1,7 @@
+# 2026-11-25
+
+* **Update**: `ks-utility` moved from `v0.4.2` to `v0.9.0` (more languages, the translation tools; [ks-utility translation tools](https://github.com/kumarsumit17/ks-utility/blob/main/specs/translating.md)).
+
 # 2026-11-24
 
 * **Update**: [Releasing](release.md): the first rehearsal needed the release workflow on `main`, so `main` was fast-forwarded to a green `dev` first.
