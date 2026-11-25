@@ -27,7 +27,7 @@ These names match ks-utility's [app-update](https://github.com/kumarsumit17/ks-u
 
 ## Landing page card
 
-`ks-suite.json` in the repository root is this app's card on the KS-Suite landing page, read from `main` (the released app). It reaches `main` with each release; change it on `dev` when the platforms or description change.
+`ks-suite.json` in the repository root is this app's card on the KS-Suite landing page, read from `main` (the released app). It reaches `main` with each release (one `vX.Y.Z` tag releases both builds); change it on `dev` when the platforms or description change.
 
 ## Signing
 - Not yet signed by Apple (ad hoc signature, no notarisation) or Microsoft (no Authenticode); the release notes say how to open the files the first time. Real signing needs an Apple Developer ID and a Windows code-signing certificate from the owner.

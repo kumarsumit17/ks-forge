@@ -7,7 +7,7 @@ tags: [plan, platforms, macos, windows, accessibility, performance]
 
 # Per-platform optimization plan
 
-**Status: approved by the owner on 2026-11-25.** Decisions: 1 (b) one version for both; 2 (a) tabs in the Windows title bar; 3 all three dependencies (single instance, notifications, jump list); 4 yes, background blur on macOS (a setting, off by default). Not asked, so the defaults hold: 5 Apple silicon and x64 only; 6 unsigned until the owner has certificates; 7 the owner's Windows hand check after step 4. Step 1 (versioning) is dropped. Built steps are marked in section 4. The suite rule: every platform build is its own app with its own version, the best it can be on its OS ([Platform folders](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/platform-folders.md)). Modelled on ks-jaiplayer's plan.
+**Status: approved by the owner on 2026-11-25.** Decisions: 1 one version for both (also the suite rule); 2 (a) tabs in the Windows title bar; 3 all three dependencies (single instance, notifications, jump list); 4 yes, background blur on macOS (a setting, off by default). Not asked, so the defaults hold: 5 Apple silicon and x64 only; 6 unsigned until the owner has certificates; 7 the owner's Windows hand check after step 4. Built steps are marked in section 4. The suite rule: every platform build is its own app with its own version, the best it can be on its OS ([Platform folders](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/platform-folders.md)). Modelled on ks-jaiplayer's plan.
 
 KS Forge targets macOS and Windows only (`tv/google-tv`, `mobile/*` stay empty). The terminal core stays written once in `shared/`: the Rust PTY layer, settings, shell integration and the React and xterm.js interface. What differs per OS moves to its platform folder: Tauri config overrides (already there) and, new, platform-only Rust in `desktop/mac/src/` and `desktop/windows/src/`, compiled into the one crate with `#[cfg(target_os)]` and `#[path]`, so `shared/` keeps no code for one platform only.
 
@@ -71,9 +71,7 @@ Other findings: the tab bar is the window's drag area on both, but double-clicki
 
 ## 3. Decisions for the owner
 
-1. **Own version per platform.** Options:
-   - **(a)** One tag per platform, `mac-vX.Y.Z` and `windows-vX.Y.Z`, through ks-utility v0.10.0's helpers (`tag_prefix`, `parse_releases`, the release list instead of `releases/latest`). Because v0.1.0 copies read only `releases/latest`, a plain **bridge release `v0.1.1`** (both platforms, with the v0.10.0 updater) goes out first; after that each platform releases alone. The release workflow takes a `platform` input for rehearsals.
-   - (b) Keep one `vX.Y.Z` for both.
+1. **Versions**: one plain `vX.Y.Z` tag releases both builds with one version (suite rule, 2026-11-25; the owner also chose this). No platform tags or bridge releases.
 2. **Windows title bar**: (a) tabs in the title bar with our own caption buttons and Mica (more work, about 40 px more terminal); (b) keep the native title bar, only make it follow the dark or light theme.
 3. **New dependencies** (each optional): `tauri-plugin-single-instance` (Windows second launch → new tab), `tauri-plugin-notification` (command finished, both), the `windows` crate for the jump list (Windows). Everything else uses what is already in the tree.
 4. **macOS background blur**: needs Tauri's `macOSPrivateApi`, which Apple does not allow in the Mac App Store; fine for the dmg. Yes or no.
@@ -87,7 +85,6 @@ Each step is one or more commits on `dev`, tested on its platform before the nex
 
 | Step | What | Where | Tested on |
 |---|---|---|---|
-| ~~1~~ | *Dropped (decision 1 b).* Versioning per platform (if 3.1 a): ks-utility pin v0.10.0, updater on the release list, bridge release `v0.1.1`, then platform tags and the `platform` rehearsal input | `shared/src-tauri/src/updates.rs`, `scripts/`, `.github/workflows/release.yml`, `specs/release.md` | Rust and script tests; a rehearsal per platform; v0.1.0 → v0.1.1 update on this Mac |
 | 2 | Platform folders for Rust (`desktop/<os>/src/`), per-window state, multiple windows, session restore, "This device" settings | `shared/`, `desktop/*/src/` | Unit tests; self-test on macOS and on CI for Windows |
 | 3 | macOS: menus and Dock menu, Finder services, drag and drop, Secure Keyboard Entry, Option keys, (blur), (notifications), VoiceOver | `desktop/mac/` | This Mac: self-test, the built dmg, VoiceOver |
 | 4 | Windows: title bar (decision 2), Ctrl+C/V, running-program check, Explorer menu and command line, (single instance), (jump list), administrator profiles, start-up hint, Narrator mode | `desktop/windows/` | CI: unit tests, installer install/self-test/uninstall (checks the registry keys and the busy check); owner's hand check |
