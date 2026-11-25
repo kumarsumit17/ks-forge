@@ -16,6 +16,9 @@ for i in $(seq 1 60); do [ -f "$EXE" ] && break; sleep 1; done
 [ -f "$EXE" ] || { echo "::error::not installed: $EXE"; ls -la "$DIR" 2>/dev/null || true; exit 1; }
 [ -f "$DIR/uninstall.exe" ] || { echo "::error::no uninstaller"; exit 1; }
 echo "installed: $EXE"
+# File Explorer's "Open in KS Forge" (desktop/windows/hooks.nsh).
+MSYS2_ARG_CONV_EXCL="*" reg query 'HKCU\Software\Classes\Directory\shell\KSForge\command' /ve | grep -q -- '-d' || { echo "::error::Open in KS Forge is not registered"; exit 1; }
+echo "explorer menu: registered"
 
 echo "self-test of the installed copy"
 HERE=$(cd "$(dirname "$0")/../.." && pwd)
@@ -25,4 +28,5 @@ echo "uninstalling"
 MSYS2_ARG_CONV_EXCL="*" "$DIR/uninstall.exe" /S
 for i in $(seq 1 60); do [ ! -f "$EXE" ] && break; sleep 1; done
 [ ! -f "$EXE" ] || { echo "::error::still installed after uninstall"; exit 1; }
+if MSYS2_ARG_CONV_EXCL="*" reg query 'HKCU\Software\Classes\Directory\shell\KSForge' > /dev/null 2>&1; then echo "::error::Open in KS Forge left behind"; exit 1; fi
 echo "uninstalled"

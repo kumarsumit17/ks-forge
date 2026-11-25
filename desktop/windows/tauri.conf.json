@@ -4,7 +4,10 @@
       "nsis": {
         "installMode": "currentUser",
         "displayLanguageSelector": false,
-        "languages": ["English"]
+        "languages": [
+          "English"
+        ],
+        "installerHooks": "../../desktop/windows/hooks.nsh"
       }
     }
   }

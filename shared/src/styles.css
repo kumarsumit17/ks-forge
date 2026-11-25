@@ -14,6 +14,9 @@
   --hover: color-mix(in srgb, var(--fg) 9%, transparent);
   --panel: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
   --radius: 8px;
+  --bg-alpha: 1;
+  /* The window's surfaces: see-through with the background blur on (--bg-alpha < 1). */
+  --surface: color-mix(in srgb, var(--bg) calc(var(--bg-alpha) * 100%), transparent);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
   color: var(--fg);
@@ -26,7 +29,7 @@
   --panel: var(--bg);
 }
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; overflow: hidden; background: var(--bg); }
+html, body, #root { height: 100%; margin: 0; overflow: hidden; background: var(--surface); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: default; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -37,7 +40,7 @@ kbd { font-family: inherit; font-size: 11px; color: var(--muted); background: va
 .app { display: flex; flex-direction: column; height: 100%; }
 
 /* ----- Tab bar ----- */
-.tabbar { display: flex; align-items: center; height: 38px; flex: none; background: var(--chrome); border-bottom: 1px solid var(--line); padding: 0 6px; gap: 4px; user-select: none; -webkit-user-select: none; }
+.tabbar { display: flex; align-items: center; height: 38px; flex: none; background: color-mix(in srgb, var(--chrome) calc(var(--bg-alpha) * 100%), transparent); border-bottom: 1px solid var(--line); padding: 0 6px; gap: 4px; user-select: none; -webkit-user-select: none; }
 [data-platform="macos"] .tabbar { padding-left: 80px; }
 .tabs { display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; height: 100%; flex: 0 1 auto; }
 .tabs::-webkit-scrollbar { display: none; }
@@ -52,6 +55,12 @@ kbd { font-family: inherit; font-size: 11px; color: var(--muted); background: va
 .tab-close { flex: none; display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px; background: none; opacity: 0; color: var(--muted); }
 .tab:hover .tab-close, .tab.active .tab-close { opacity: 1; }
 .tab-close:hover { background: var(--hover); color: var(--fg); }
+/* Windows: our caption buttons take the system title bar's place. */
+[data-platform="windows"] .tabbar { padding-right: 0; }
+.caption-buttons { display: flex; align-self: stretch; margin-left: 4px; }
+.caption { display: grid; place-items: center; width: 46px; border: 0; background: none; color: var(--fg); }
+.caption:hover { background: var(--hover); }
+.caption.close:hover { background: #c42b1c; color: #fff; }
 .tab-rename { flex: 1; min-width: 0; height: 22px; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); padding: 0 4px; }
 .tabbar-actions { display: flex; align-items: center; flex: 1 0 auto; height: 100%; gap: 2px; }
 .icon-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); flex: none; }
@@ -68,8 +77,9 @@ kbd { font-family: inherit; font-size: 11px; color: var(--muted); background: va
 .divider.row { top: 0; bottom: 0; right: -3px; width: 6px; cursor: col-resize; background: linear-gradient(90deg, transparent 2.5px, var(--line) 2.5px, var(--line) 3.5px, transparent 3.5px); }
 .divider.column { left: 0; right: 0; bottom: -3px; height: 6px; cursor: row-resize; background: linear-gradient(180deg, transparent 2.5px, var(--line) 2.5px, var(--line) 3.5px, transparent 3.5px); }
 .divider:hover { background: color-mix(in srgb, var(--accent) 60%, transparent); }
-.pane { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; background: var(--bg); }
+.pane { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; background: transparent; }
 .pane.many::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--bg); opacity: 0.32; transition: opacity 0.15s; }
+.pane-starting { position: absolute; left: calc(var(--padding) + 2px); top: calc(var(--padding) + 2px); color: var(--muted); font-size: 12px; pointer-events: none; animation: fade 0.3s ease-out 0.4s both; }
 .pane.many.active::after { opacity: 0; }
 .pane.many.active { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--accent) 70%, transparent); }
 .pane-host { flex: 1; min-width: 0; min-height: 0; padding: var(--padding); padding-right: 0; overflow: hidden; }
@@ -191,3 +201,14 @@ input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid v
 .about-head { display: flex; align-items: center; gap: 14px; margin: 8px 0 12px; }
 .about-head p { margin: 2px 0 0; }
 .about p { line-height: 1.5; }
+
+/* Accessibility: no motion for people who asked the system for less; the system's own
+   colours in Windows high-contrast mode. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (forced-colors: active) {
+  .tab.active::after, .switch.on, .button.primary { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .pane.many::after { display: none; }
+  .pane.many.active { outline: 2px solid Highlight; outline-offset: -2px; }
+}

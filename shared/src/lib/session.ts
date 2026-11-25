@@ -29,6 +29,8 @@ export interface SessionEvents {
   contextMenu(x: number, y: number): void;
   /** The text of a failed write (shown once). */
   error(e: unknown): void;
+  /** A command ended (shell integration marks): how long it ran and its exit status. */
+  commandFinished(ms: number, code: number): void;
 }
 
 export interface SearchOptions {
@@ -48,6 +50,11 @@ export class Session {
   title = "";
   ptyId: number | null = null;
   exited = false;
+  /** The shell has printed something (until then the pane shows "Starting …"). */
+  hasOutput = false;
+  private commandStart = 0;
+  /** macOS: the Option key last pressed, 1 = left, 2 = right (KeyboardEvent.location). */
+  private altSide = 0;
   private pendingInput = "";
   private fit = new FitAddon();
   private search = new SearchAddon();
@@ -77,7 +84,7 @@ export class Session {
     this.element.className = "terminal-surface";
     this.term = new Terminal({
       allowProposedApi: true,
-      allowTransparency: false,
+      allowTransparency: settings.backgroundBlur,
       fontFamily: fontStack(settings.fontFamily, platform),
       fontSize: settings.fontSize,
       lineHeight: settings.lineHeight,
@@ -86,11 +93,11 @@ export class Session {
       cursorStyle: settings.cursorStyle,
       cursorBlink: settings.cursorBlink,
       scrollback: settings.scrollback,
-      macOptionIsMeta: settings.optionIsMeta,
+      macOptionIsMeta: settings.optionAsMeta === "both",
       macOptionClickForcesSelection: true,
       rightClickSelectsWord: false,
       drawBoldTextInBrightColors: true,
-      theme: xtermTheme(theme),
+      theme: xtermTheme(theme, settings.backgroundBlur ? settings.backgroundOpacity : 1),
       linkHandler: { activate: (e, uri) => this.link(e, uri), allowNonHttpProtocols: false },
     });
     this.term.loadAddon(this.fit);
@@ -103,6 +110,25 @@ export class Session {
       this.onSearchResults?.(r.resultIndex, r.resultCount);
     });
 
+    // macOS: only the left or right Option key acts as Meta when the setting says so; the
+    // other keeps typing special characters.
+    this.element.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "Alt") this.altSide = e.location;
+      },
+      true,
+    );
+    this.term.attachCustomKeyEventHandler((e) => {
+      const side = this.settings.optionAsMeta;
+      if (this.platform !== "macos" || e.type !== "keydown" || !e.altKey || e.metaKey || e.ctrlKey) return true;
+      if (side !== (this.altSide === 2 ? "right" : this.altSide === 1 ? "left" : "")) return true;
+      const ch = metaChar(e.code, e.shiftKey);
+      if (!ch || this.ptyId === null) return true;
+      void api.write(this.ptyId, "\x1b" + ch);
+      e.preventDefault();
+      return false;
+    });
     this.term.onData((d) => {
       if (this.exited) {
         if (d === "\r") void this.restart();
@@ -204,6 +230,7 @@ export class Session {
 
   private async start(): Promise<void> {
     this.exited = false;
+    this.hasOutput = false;
     this.pendingInput = "";
     this.prompts = [];
     try {
@@ -217,7 +244,13 @@ export class Session {
           cols: this.term.cols,
           rows: this.term.rows,
         },
-        (bytes) => this.term.write(bytes),
+        (bytes) => {
+          if (!this.hasOutput) {
+            this.hasOutput = true;
+            this.events.changed();
+          }
+          this.term.write(bytes);
+        },
       );
       this.lastSize = { cols: this.term.cols, rows: this.term.rows };
       if (this.pendingInput) {
@@ -288,8 +321,18 @@ export class Session {
     o.cursorStyle = settings.cursorStyle;
     o.cursorBlink = settings.cursorBlink;
     o.scrollback = settings.scrollback;
-    o.macOptionIsMeta = settings.optionIsMeta;
-    o.theme = xtermTheme(theme);
+    o.macOptionIsMeta = settings.optionAsMeta === "both";
+    const transparent = settings.backgroundBlur;
+    if (o.allowTransparency !== transparent) {
+      o.allowTransparency = transparent;
+      // The WebGL renderer reads transparency when it starts.
+      if (this.webgl) {
+        this.webgl.dispose();
+        this.webgl = null;
+        this.loadWebgl();
+      }
+    }
+    o.theme = xtermTheme(theme, transparent ? settings.backgroundOpacity : 1);
     this.applyLigatures();
     if (fontChanged && this.webgl) {
       // The WebGL glyph atlas holds the old font's glyphs.
@@ -322,6 +365,12 @@ export class Session {
   /** OSC 133: A = a prompt starts, C = a command starts, D;<code> = it ended. */
   private mark(data: string): boolean {
     const [kind, arg] = data.split(";");
+    if (kind === "C") {
+      this.commandStart = Date.now();
+    } else if (kind === "D" && this.commandStart) {
+      this.events.commandFinished(Date.now() - this.commandStart, Number(arg) || 0);
+      this.commandStart = 0;
+    }
     if (kind === "A") {
       const m = this.term.registerMarker(0);
       if (m) {
@@ -376,6 +425,16 @@ export class Session {
     }
   }
 
+  /** Types text into the shell as if typed (dropped files' paths). */
+  typeText(text: string): void {
+    if (this.ptyId !== null && !this.exited) void api.write(this.ptyId, text);
+    this.term.focus();
+  }
+
+  setScreenReaderMode(on: boolean): void {
+    if (this.term.options.screenReaderMode !== on) this.term.options.screenReaderMode = on;
+  }
+
   async copySelection(): Promise<void> {
     if (this.term.hasSelection()) await api.clipboardWrite(this.term.getSelection());
   }
@@ -425,9 +484,27 @@ export class Session {
   }
 }
 
-export function xtermTheme(t: Theme): ITheme {
+/** The character an Option+key press sends after Esc when Option is Meta. */
+export function metaChar(code: string, shift: boolean): string | null {
+  if (/^Key[A-Z]$/.test(code)) {
+    const c = code.slice(3);
+    return shift ? c : c.toLowerCase();
+  }
+  if (/^Digit[0-9]$/.test(code)) return shift ? ")!@#$%^&*("[Number(code.slice(5))] : code.slice(5);
+  const plain: Record<string, [string, string]> = {
+    Minus: ["-", "_"], Equal: ["=", "+"], BracketLeft: ["[", "{"], BracketRight: ["]", "}"], Backslash: ["\\", "|"],
+    Semicolon: [";", ":"], Quote: ["'", '"'], Comma: [",", "<"], Period: [".", ">"], Slash: ["/", "?"], Backquote: ["`", "~"],
+    Backspace: ["\x7f", "\x7f"], Space: [" ", " "],
+  };
+  const p = plain[code];
+  return p ? p[shift ? 1 : 0] : null;
+}
+
+/** The terminal colours; `alpha` below 1 makes the background see-through for the blur. */
+export function xtermTheme(t: Theme, alpha = 1): ITheme {
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, "0");
   return {
-    background: t.background,
+    background: alpha < 1 ? t.background + a : t.background,
     foreground: t.foreground,
     cursor: t.cursor,
     cursorAccent: t.background,

@@ -3,7 +3,7 @@ import {
   Terminal, SquareTerminal, SquareChevronRight, Code, Braces, Server, Database, Cloud, Container, Box, GitBranch, Bug,
   FlaskConical, Rocket, Flame, Hammer, Wrench, Cpu, Globe, House, Folder, BookOpen, Music, Star, Heart, Zap, Shield, Fish,
   Plus, X, ChevronDown, Settings, Search, ArrowUp, ArrowDown, CaseSensitive, WholeWord, Regex, Columns2, Rows2, Command,
-  Palette, Keyboard, User, RefreshCw, Info, Trash2, Copy, Download, Upload, TriangleAlert, Check, FileText, Maximize2,
+  Palette, Keyboard, User, Minus, Square, Accessibility, Monitor, RefreshCw, Info, Trash2, Copy, Download, Upload, TriangleAlert, Check, FileText, Maximize2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,6 +15,7 @@ const ICONS: Record<string, LucideIcon> = {
   plus: Plus, x: X, "chevron-down": ChevronDown, settings: Settings, search: Search, "arrow-up": ArrowUp, "arrow-down": ArrowDown,
   "case-sensitive": CaseSensitive, "whole-word": WholeWord, regex: Regex, "columns-2": Columns2, "rows-2": Rows2, command: Command,
   palette: Palette, keyboard: Keyboard, user: User, "refresh-cw": RefreshCw, info: Info, "trash-2": Trash2, copy: Copy,
+  minus: Minus, square: Square, accessibility: Accessibility, monitor: Monitor,
   download: Download, upload: Upload, "triangle-alert": TriangleAlert, check: Check, "file-text": FileText, "maximize-2": Maximize2,
 };
 

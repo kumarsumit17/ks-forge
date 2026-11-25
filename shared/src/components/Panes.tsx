@@ -3,6 +3,7 @@ import { app, type Tab } from "../lib/app.ts";
 import { useApp } from "../lib/useApp.ts";
 import type { Node, Split } from "../lib/layout.ts";
 import { SearchBar } from "./SearchBar.tsx";
+import { t } from "../lib/i18n.ts";
 
 /** Every tab's panes; only the active tab is shown, so the others keep their terminals. */
 export function Workspace() {
@@ -67,6 +68,7 @@ function SplitView({ tab, node }: { tab: Tab; node: Split }) {
 
 function Pane({ tab, id }: { tab: Tab; id: string }) {
   const s = useApp();
+  void s.revision;
   const host = useRef<HTMLDivElement>(null);
   const session = app.sessions.get(id);
   const active = tab.active === id;
@@ -80,8 +82,13 @@ function Pane({ tab, id }: { tab: Tab; id: string }) {
   }, [session]);
 
   return (
-    <div className={"pane" + (active ? " active" : "") + (many ? " many" : "")} onMouseDown={() => app.focusPane(id)}>
+    <div className={"pane" + (active ? " active" : "") + (many ? " many" : "")} data-pane={id} onMouseDown={() => app.focusPane(id)}>
       <div ref={host} className="pane-host" />
+      {session && !session.hasOutput && !session.exited && (
+        <div className="pane-starting" aria-live="polite">
+          {t("pane.starting", { name: session.profile.name })}
+        </div>
+      )}
       {active && s.searching && tab.id === s.activeTab && session && <SearchBar session={session} />}
     </div>
   );

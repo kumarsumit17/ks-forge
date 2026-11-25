@@ -31,9 +31,25 @@ arboard = { version = "3", default-features = false }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream"] }
 tokio = { version = "1", features = ["fs", "io-util", "rt", "macros"] }
 futures-util = { version = "0.3", default-features = false }
+# "Command finished" notifications (plan-per-platform, decision 3).
+tauri-plugin-notification = "2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# Windows: the running-program check, jump list, administrator profiles and Narrator check
+# (desktop/windows/src/platform.rs); a second launch opens a tab (plan-per-platform,
+# decision 3). `windows` is already in the tree through Tauri.
+[target.'cfg(windows)'.dependencies]
+tauri-plugin-single-instance = "2"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_System_Diagnostics_ToolHelp", "Win32_UI_Shell", "Win32_UI_Shell_Common", "Win32_UI_Shell_PropertiesSystem", "Win32_UI_WindowsAndMessaging"] }
+
+# macOS: the Dock menu, Finder services and VoiceOver check (desktop/mac/src/platform.rs).
+# Already in the tree through Tauri (specs/dependencies.md).
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSURL"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSMenu", "NSMenuItem", "NSPasteboard", "NSWorkspace", "NSResponder", "objc2-core-foundation"] }
 
 [profile.release]
 codegen-units = 1

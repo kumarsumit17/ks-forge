@@ -5,15 +5,17 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createUpdateStore, type CheckResult, type Opened, type UpdateStore } from "ks-utility";
-import { api, onMenu, onPtyExit, onSettingsFile, onSettingsSynced, type AppInfo } from "./tauri.ts";
+import { api, onMenu, onOpenRequest, onPtyExit, onSettingsFile, onSettingsSynced, type AppInfo } from "./tauri.ts";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { activeThemeId, LIMITS, normalize, parseFile, serialize, type FoundShell, type Profile, type Settings } from "./settings.ts";
 import { BUILT_IN_THEMES, DEFAULT_DARK, findTheme, type Theme } from "./themes.ts";
 import * as L from "./layout.ts";
-import { bindingTable, fromEvent, isAction, type ActionId, type Platform } from "./keys.ts";
+import { ACTIONS, bindingTable, effectiveBindings, fromEvent, isAction, normalize as normalizeKey, type ActionId, type Platform } from "./keys.ts";
 import { Session } from "./session.ts";
 import { parseLayout, renameLeaves, type SavedLayout, type SavedPane } from "./layoutStore.ts";
 import { baseName, pasteWarning } from "./text.ts";
-import { errorText, isMsg, setLanguage, t, type TextKey } from "./i18n.ts";
+import { errorText, isMsg, setLanguage, t, tk, type TextKey } from "./i18n.ts";
 
 export interface Tab {
   id: string;
@@ -171,8 +173,22 @@ export class App {
     void onSettingsFile((text) => this.onSettingsFileChanged(text));
     void onSettingsSynced((text) => this.onSettingsFileChanged(text, false));
     void onMenu((id) => {
-      if (isAction(id)) void this.run(id);
+      if (id === "secureKeyboardEntry") this.updateSettings({ secureKeyboardEntry: !this.state.settings.secureKeyboardEntry });
+      else if (isAction(id)) void this.run(id);
     });
+    void onOpenRequest((r) => {
+      this.newTab(r.profile ?? undefined, r.cwd ?? undefined);
+    });
+    // Files dropped on a pane type their paths there, quoted for the shell.
+    void getCurrentWebview().onDragDropEvent((e) => {
+      if (e.payload.type !== "drop" || e.payload.paths.length === 0) return;
+      const ratio = window.devicePixelRatio || 1;
+      const at = document.elementFromPoint(e.payload.position.x / ratio, e.payload.position.y / ratio);
+      const host = at?.closest("[data-pane]")?.getAttribute("data-pane");
+      const session = (host && this.sessions.get(host)) || this.session;
+      session?.typeText(e.payload.paths.map((p) => quotePath(p, this.state.platform)).join(" ") + " ");
+    });
+    window.addEventListener("focus", () => void this.refreshScreenReader());
     void getCurrentWindow().onCloseRequested(async (e) => {
       e.preventDefault();
       await this.closeWindow();
@@ -184,6 +200,7 @@ export class App {
     }
     this.set({ ready: true });
     this.subscribe(() => this.scheduleSessionSave());
+    void this.syncSystem();
     void getCurrentWindow().show();
     this.scheduleUpdateChecks();
   }
@@ -235,6 +252,7 @@ export class App {
     this.applyChrome();
     this.applySettingsToSessions();
     this.save();
+    void this.syncSystem();
   }
 
   private save(): void {
@@ -256,6 +274,7 @@ export class App {
     this.set({ settings, problems, fileBroken: false });
     this.applyChrome();
     this.applySettingsToSessions();
+    void this.syncSystem();
     if (toast) this.showToast(t("toast.settingsReloaded"));
   }
 
@@ -281,6 +300,9 @@ export class App {
     root.dataset.dark = String(th.dark);
     root.dataset.platform = this.state.platform;
     root.style.setProperty("--padding", `${this.state.settings.padding}px`);
+    const s = this.state.settings;
+    root.style.setProperty("--bg-alpha", String(s.backgroundBlur ? s.backgroundOpacity : 1));
+    root.dataset.blur = String(s.backgroundBlur);
   }
 
   // ----- Tabs and panes -----
@@ -320,8 +342,10 @@ export class App {
       focused: () => this.focusPane(id),
       contextMenu: (x, y) => this.paneMenu(id, x, y),
       error: (e) => this.showToast(errorText(e)),
+      commandFinished: (ms, code) => void this.commandFinished(session, ms, code),
     });
     this.sessions.set(id, session);
+    if (this.screenReader) session.setScreenReaderMode(true);
     return session;
   }
 
@@ -333,6 +357,13 @@ export class App {
     const profile = this.profile(profileId);
     if (!profile) {
       this.showToast(t("error.noProfile"));
+      return;
+    }
+    // Windows: an administrator profile opens in an elevated copy of the app (UAC asks).
+    if (profile.runAsAdmin && this.state.platform === "windows" && !this.state.info?.elevated) {
+      void api.runElevated(profile.id).then((ok) => {
+        if (!ok) this.showToast(t("error.elevate"));
+      });
       return;
     }
     const session = this.makeSession(profile, cwd ?? this.currentFolder());
@@ -500,6 +531,63 @@ export class App {
     await api.quitApp();
   }
 
+  // ----- The system: menus, Dock / jump list, blur, secure input, screen readers -----
+
+  private systemSig = "";
+  private screenReader = false;
+
+  /** Hands what the system shows to Rust, when it changed. */
+  private async syncSystem(): Promise<void> {
+    const s = this.state.settings;
+    const platform = this.state.platform;
+    const shortcuts = effectiveBindings(s.keybindings, platform);
+    const text: Record<string, { label: string; shortcut: string }> = {};
+    for (const a of ACTIONS) text[a] = { label: tk(`action.${a}`), shortcut: normalizeKey(shortcuts[a] || "", platform) ?? "" };
+    for (const k of ["about", "services", "hide", "hideOthers", "showAll", "shell", "edit", "view", "window", "minimize", "zoom", "fullscreen", "secureKeyboardEntry"]) {
+      text[`menu.${k}`] = { label: tk(`menu.${k}`), shortcut: "" };
+    }
+    text.copy = { label: t("common.copy"), shortcut: "" };
+    text.paste = { label: t("common.paste"), shortcut: "" };
+    const profiles: [string, string][] = s.profiles.map((p) => [p.id, p.name]);
+    const sig = JSON.stringify([text, s.secureKeyboardEntry, s.backgroundBlur, profiles, s.screenReaderMode]);
+    if (sig === this.systemSig) return;
+    this.systemSig = sig;
+    const calls: Promise<unknown>[] = [
+      api.profilesChanged(profiles, t("action.newWindow"), t("action.newTab")),
+      api.setBlur(s.backgroundBlur),
+      this.refreshScreenReader(),
+    ];
+    if (platform === "macos") calls.push(api.menuUpdate(text, s.secureKeyboardEntry), api.secureInput(s.secureKeyboardEntry));
+    await Promise.all(calls.map((c) => c.catch(() => {})));
+  }
+
+  /** Screen reader mode: on, off, or following VoiceOver / Narrator / NVDA. */
+  private async refreshScreenReader(): Promise<void> {
+    const mode = this.state.settings.screenReaderMode;
+    const on = mode === "on" || (mode === "auto" && (await api.screenReaderActive().catch(() => false)));
+    if (on === this.screenReader) return;
+    this.screenReader = on;
+    for (const x of this.sessions.values()) x.setScreenReaderMode(on);
+  }
+
+  /** "Command finished": a command ran 10 s or more and the window is not in front. */
+  private async commandFinished(session: Session, ms: number, code: number): Promise<void> {
+    if (!this.state.settings.notifyLongCommands || ms < 10_000 || document.hasFocus()) return;
+    try {
+      let ok = await isPermissionGranted();
+      if (!ok) ok = (await requestPermission()) === "granted";
+      if (!ok) return;
+      const tab = this.state.tabs.find((x) => L.contains(x.root, session.id));
+      const seconds = Math.round(ms / 1000);
+      sendNotification({
+        title: tab ? this.tabTitle(tab) : "KS Forge",
+        body: code === 0 ? t("notify.done", { seconds }) : t("notify.failed", { seconds, code }),
+      });
+    } catch {
+      // Notifications are a convenience; nothing to do if the system refuses.
+    }
+  }
+
   // ----- Session restore -----
 
   private sessionTimer = 0;
@@ -661,6 +749,24 @@ export class App {
     if (e.isComposing) return;
     const combo = fromEvent(e);
     if (!combo) return;
+    // Windows conventions: Ctrl+C copies when text is selected (otherwise it reaches the
+    // shell as an interrupt), Ctrl+V pastes. Both are settings.
+    const inTerminal = e.target instanceof HTMLElement && !!e.target.closest(".terminal-surface");
+    if (this.state.platform === "windows" && inTerminal && this.state.overlay === "none") {
+      const s = this.state.settings;
+      if (combo === "ctrl+c" && s.ctrlCCopies && this.session?.term.hasSelection()) {
+        e.preventDefault();
+        e.stopPropagation();
+        void this.session.copySelection().then(() => this.session?.term.clearSelection());
+        return;
+      }
+      if (combo === "ctrl+v" && s.ctrlVPastes) {
+        e.preventDefault();
+        e.stopPropagation();
+        void this.session?.pasteFromClipboard();
+        return;
+      }
+    }
     const action = this.table.get(combo);
     const overlayOpen = this.state.overlay !== "none" || this.state.dialog !== null || this.state.renaming !== null;
     if (e.key === "Escape" && this.state.menu) {
@@ -764,6 +870,12 @@ export class App {
   text(key: TextKey, params?: Record<string, string | number>): string {
     return t(key, params);
   }
+}
+
+/** A dropped file's path, quoted for the shell. */
+export function quotePath(path: string, platform: Platform): string {
+  if (platform === "windows") return /[\s&()^%!;,]/.test(path) ? `"${path}"` : path;
+  return /^[A-Za-z0-9_./~+-]+$/.test(path) ? path : `'${path.replace(/'/g, "'\\''")}'`;
 }
 
 export const app = new App();

@@ -13,6 +13,10 @@ KS Forge uses these libraries directly. Each brings its own dependencies, under 
 | tokio, futures-util | MIT; MIT OR Apache-2.0 | Async I/O for the update download |
 | serde, serde_json | MIT OR Apache-2.0 | Commands and the update state file |
 | libc | MIT OR Apache-2.0 | Unix types (macOS) |
+| tauri-plugin-notification | MIT OR Apache-2.0 | "Command finished" notifications |
+| tauri-plugin-single-instance | MIT OR Apache-2.0 | Windows: a second launch opens a tab |
+| windows | MIT OR Apache-2.0 | Windows: jump list, process list, administrator profiles |
+| objc2, objc2-foundation, objc2-app-kit | MIT | macOS: Dock menu, Finder services, VoiceOver check |
 | ks-utility | MIT | KS-Suite's shared helpers (first-party) |
 
 ## Interface (`shared/package.json`)
@@ -20,7 +24,7 @@ KS Forge uses these libraries directly. Each brings its own dependencies, under 
 | Package | Licence | Why |
 |---|---|---|
 | @xterm/xterm and its addons (webgl, fit, search, web-links, unicode11) | MIT | The terminal grid, drawn on the GPU |
-| @tauri-apps/api | Apache-2.0 OR MIT | Calls into Rust |
+| @tauri-apps/api, @tauri-apps/plugin-notification | Apache-2.0 OR MIT | Calls into Rust; notifications |
 | react, react-dom | MIT | The interface |
 | lucide-react | ISC | Icons |
 | ks-utility | MIT | Translator, language check, app-update store, byte formatting (first-party) |

@@ -19,6 +19,10 @@ The suite rule ([Dependencies](https://github.com/kumarsumit17/KS-Suite/blob/mai
 | arboard | The system clipboard from Rust on both systems (the web view cannot read the clipboard without asking) |
 | reqwest with rustls, tokio, futures-util | TLS must come from a maintained library; the same stack as ks-download-manager |
 | serde, serde_json | Already brought by Tauri |
+| tauri-plugin-notification | "Command finished" notifications on both systems (owner's decision 3, 2026-11-25) |
+| tauri-plugin-single-instance (Windows) | A second launch (Explorer, jump list, shortcut) opens a tab in the running app (decision 3) |
+| windows (Windows) | Jump list (COM), process list for the running-program check, `ShellExecute` for administrator profiles, the screen-reader flag; already in the tree through Tauri |
+| objc2, objc2-foundation, objc2-app-kit (macOS) | Dock menu, Finder services, VoiceOver check; already in the tree through Tauri |
 | React, lucide-react | The suite's interface stack; Lucide icons are imported one by one so only those used are bundled |
 
 No UI kit, state library, router or test framework: our own CSS, a small store (`shared/src/lib/app.ts`), and Node's built-in test runner.

@@ -26,6 +26,15 @@ mod platform {
     ) -> tauri::WebviewWindowBuilder<'a, tauri::Wry, M> {
         b
     }
+    pub fn blur_effects() -> tauri::utils::config::WindowEffectsConfig {
+        tauri::utils::config::WindowEffectsConfig::default()
+    }
+    pub fn screen_reader_active() -> bool {
+        false
+    }
+    pub fn self_check() -> String {
+        String::new()
+    }
 }
 
 use std::path::PathBuf;
@@ -56,6 +65,8 @@ struct AppInfo {
     home: String,
     settings_path: String,
     repo: &'static str,
+    /// Windows: this copy was started elevated for an administrator profile.
+    elevated: bool,
 }
 
 #[tauri::command]
@@ -73,6 +84,7 @@ fn app_info(app: State<App>) -> AppInfo {
         home: app.home.to_string_lossy().into_owned(),
         settings_path: app.settings.path().to_string_lossy().into_owned(),
         repo: updates::REPO,
+        elevated: std::env::args().any(|a| a == "--elevated"),
     }
 }
 
@@ -207,6 +219,91 @@ fn selftest_enabled() -> bool {
     std::env::var_os("KS_FORGE_SELFTEST").is_some()
 }
 
+
+/// Opens a tab for `request` in the window in front, or a new window when asked or when
+/// there is none (Dock menu, Finder, a second launch on Windows).
+fn open_request(app: &AppHandle, request: wins::Request, new_window: bool) {
+    if !new_window && let Some(w) = wins::front(app) {
+        let _ = w.emit_to(w.label(), "open-request", &request);
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+        return;
+    }
+    if let Err(e) = app.state::<App>().windows.open(app, request) {
+        eprintln!("could not open a window: {e}");
+    }
+}
+
+/// The folder for a path from Finder or Explorer: the path itself, or a file's folder.
+fn folder_of(path: &std::path::Path) -> Option<String> {
+    let dir = if path.is_dir() { Some(path) } else { path.parent() };
+    dir.filter(|d| d.is_dir()).map(|d| d.to_string_lossy().into_owned())
+}
+
+/// The menu bar's labels (the interface's language) and the user's shortcuts (macOS).
+#[tauri::command]
+#[allow(unused_variables)]
+fn menu_update(handle: AppHandle, text: serde_json::Value, secure: bool) -> Result<(), Msg> {
+    #[cfg(target_os = "macos")]
+    {
+        let text: std::collections::HashMap<String, platform::MenuText> = serde_json::from_value(text).unwrap_or_default();
+        let menu = platform::build_menu(&handle, &text, secure).map_err(|e| msg!("error.menu", detail = e))?;
+        handle.set_menu(menu).map_err(|e| msg!("error.menu", detail = e))?;
+    }
+    Ok(())
+}
+
+/// The profiles, for the Dock menu (macOS) and the taskbar jump list (Windows).
+#[tauri::command]
+#[allow(unused_variables)]
+fn profiles_changed(profiles: Vec<(String, String)>, new_window: String, new_tab: String) {
+    #[cfg(target_os = "macos")]
+    platform::set_dock_profiles(profiles, new_window, new_tab);
+    #[cfg(windows)]
+    platform::update_jump_list(&profiles, &new_window);
+}
+
+/// Secure Keyboard Entry (macOS).
+#[tauri::command]
+#[allow(unused_variables)]
+fn secure_input(on: bool) {
+    #[cfg(target_os = "macos")]
+    platform::set_secure_input(on);
+}
+
+/// The blur behind a translucent background (macOS: under-window material; Windows: acrylic).
+#[tauri::command]
+fn window_set_blur(window: tauri::WebviewWindow, on: bool) -> Result<(), Msg> {
+    let effects = if on { Some(platform::blur_effects()) } else { None };
+    window.set_effects(effects).map_err(|e| msg!("error.window", detail = e))
+}
+
+/// Opens a profile marked "Run as administrator" in an elevated copy of the app (Windows).
+#[tauri::command]
+#[allow(unused_variables)]
+fn run_elevated(profile: String) -> bool {
+    #[cfg(windows)]
+    {
+        platform::run_elevated(&profile)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+/// Whether a screen reader runs (VoiceOver, Narrator, NVDA), for screen reader mode "auto".
+#[tauri::command]
+fn screen_reader_active() -> bool {
+    platform::screen_reader_active()
+}
+
+/// For the self-test: this system's integrations are in place.
+#[tauri::command]
+fn selftest_platform() -> String {
+    platform::self_check()
+}
+
 /// Milliseconds since the process started, for the self-test's start-up measurement.
 #[tauri::command]
 fn app_uptime_ms() -> u64 {
@@ -230,39 +327,6 @@ fn selftest_report(handle: AppHandle, ok: bool, report: String) {
     handle.exit(if ok { 0 } else { 1 });
 }
 
-#[cfg(target_os = "macos")]
-fn menu(handle: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    use tauri::menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-    // Only what does not clash with the terminal's own shortcuts: no Cmd+W "Close Window",
-    // no Undo or Cut. Settings and Quit go through the interface (it asks before closing
-    // running programs).
-    let settings = MenuItemBuilder::with_id("openSettings", "Settings…").accelerator("CmdOrCtrl+,").build(handle)?;
-    let quit = MenuItemBuilder::with_id("quit", "Quit KS Forge").accelerator("CmdOrCtrl+Q").build(handle)?;
-    let app_menu = SubmenuBuilder::new(handle, "KS Forge")
-        .item(&PredefinedMenuItem::about(handle, Some("About KS Forge"), Some(AboutMetadata::default()))?)
-        .separator()
-        .item(&settings)
-        .separator()
-        .item(&PredefinedMenuItem::hide(handle, None)?)
-        .item(&PredefinedMenuItem::hide_others(handle, None)?)
-        .item(&PredefinedMenuItem::show_all(handle, None)?)
-        .separator()
-        .item(&quit)
-        .build()?;
-    let edit = SubmenuBuilder::new(handle, "Edit")
-        .item(&PredefinedMenuItem::copy(handle, None)?)
-        .item(&PredefinedMenuItem::paste(handle, None)?)
-        .build()?;
-    let new_window = MenuItemBuilder::with_id("newWindow", "New Window").accelerator("CmdOrCtrl+N").build(handle)?;
-    let window = SubmenuBuilder::new(handle, "Window")
-        .item(&new_window)
-        .separator()
-        .item(&PredefinedMenuItem::minimize(handle, None)?)
-        .item(&PredefinedMenuItem::maximize(handle, None)?)
-        .item(&PredefinedMenuItem::fullscreen(handle, None)?)
-        .build()?;
-    MenuBuilder::new(handle).items(&[&app_menu, &edit, &window]).build()
-}
 
 /// "Reopen windows and tabs" (`restoreSession` in settings.json), on unless set to false.
 fn restore_enabled(settings_text: &str) -> bool {
@@ -295,7 +359,20 @@ fn open_first_windows(handle: &AppHandle, restore: bool) {
 
 pub fn run() {
     let _ = START.set(std::time::Instant::now());
-    tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default();
+    // Windows: a second launch (Explorer's "Open in KS Forge", the jump list, a shortcut)
+    // opens a tab in the running app. An elevated copy stays on its own.
+    #[cfg(windows)]
+    if !platform::is_elevated_copy() {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            let new_window = wins::wants_new_window(&args);
+            let request = wins::request_from_args(&args).unwrap_or_default();
+            open_request(app, request, new_window);
+        }));
+    }
+    builder
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let handle = app.handle().clone();
             // The self-test never touches the user's settings.
@@ -329,7 +406,17 @@ pub fn run() {
             });
             #[cfg(target_os = "macos")]
             {
-                app.set_menu(menu(&handle)?)?;
+                app.set_menu(platform::build_menu(&handle, &Default::default(), false)?)?;
+                let dock_handle = handle.clone();
+                platform::install(move |r| match r {
+                    platform::Request::NewWindow => open_request(&dock_handle, wins::Request::default(), true),
+                    platform::Request::NewTab { profile } => open_request(&dock_handle, wins::Request { profile, ..Default::default() }, false),
+                    platform::Request::Folder { path, new_window } => {
+                        if let Some(cwd) = folder_of(std::path::Path::new(&path)) {
+                            open_request(&dock_handle, wins::Request { cwd: Some(cwd), ..Default::default() }, new_window);
+                        }
+                    }
+                });
                 app.on_menu_event(|app, event| {
                     // Menu commands act on the window in front.
                     if let Some(w) = wins::front(app) {
@@ -371,15 +458,32 @@ pub fn run() {
             window_new,
             session_save,
             app_quit,
+            menu_update,
+            profiles_changed,
+            secure_input,
+            window_set_blur,
+            screen_reader_active,
+            selftest_platform,
+            run_elevated,
             selftest_enabled,
             selftest_report,
             app_uptime_ms,
         ])
         .build(tauri::generate_context!())
         .expect("error while building KS Forge")
-        .run(|app, event| {
-            if let tauri::RunEvent::Exit = event {
-                app.state::<App>().ptys.kill_all();
+        .run(|app, event| match event {
+            tauri::RunEvent::Exit => app.state::<App>().ptys.kill_all(),
+            // Folders opened with KS Forge in Finder, or dropped on its Dock icon.
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Opened { urls } => {
+                for url in urls {
+                    if let Ok(path) = url.to_file_path()
+                        && let Some(cwd) = folder_of(&path)
+                    {
+                        open_request(app, wins::Request { cwd: Some(cwd), ..Default::default() }, false);
+                    }
+                }
             }
+            _ => {}
         });
 }

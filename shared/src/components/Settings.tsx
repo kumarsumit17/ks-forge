@@ -3,7 +3,7 @@ import { app } from "../lib/app.ts";
 import { useApp } from "../lib/useApp.ts";
 import { t, tk, type TextKey } from "../lib/i18n.ts";
 import { ACTIONS, conflicts, display, effectiveBindings, fromEvent, normalize, defaultBindings, type ActionId } from "../lib/keys.ts";
-import { FONT_WEIGHTS, LIMITS, TAB_ICONS, defaultFont, type CursorStyle, type Profile, type Settings as S } from "../lib/settings.ts";
+import { FONT_WEIGHTS, LIMITS, TAB_ICONS, defaultFont, type CursorStyle, type OptionAsMeta, type Profile, type ScreenReaderMode, type Settings as S } from "../lib/settings.ts";
 import { parseTheme, type Theme } from "../lib/themes.ts";
 import { joinArgs, splitArgs } from "../lib/text.ts";
 import { api } from "../lib/tauri.ts";
@@ -16,6 +16,7 @@ const SECTIONS: { id: string; icon: string; label: TextKey }[] = [
   { id: "appearance", icon: "palette", label: "settings.appearance" },
   { id: "profiles", icon: "user", label: "settings.profiles" },
   { id: "keyboard", icon: "keyboard", label: "settings.keyboard" },
+  { id: "device", icon: "monitor", label: "settings.device" },
   { id: "updates", icon: "refresh-cw", label: "common.appUpdate.section" },
   { id: "about", icon: "info", label: "settings.about" },
 ];
@@ -56,6 +57,7 @@ export function SettingsView() {
           {s.settingsSection === "appearance" && <Appearance />}
           {s.settingsSection === "profiles" && <Profiles />}
           {s.settingsSection === "keyboard" && <KeyboardSection />}
+          {s.settingsSection === "device" && <Device />}
           {s.settingsSection === "updates" && <Updates />}
           {s.settingsSection === "about" && <About />}
         </div>
@@ -142,11 +144,16 @@ function General() {
       <Row label={t("settings.rightClickPaste")} hint={t("settings.rightClickPasteHint")}>
         <Switch label={t("settings.rightClickPaste")} checked={s.rightClickPaste} onChange={(v) => set({ rightClickPaste: v })} />
       </Row>
-      {platform === "macos" && (
-        <Row label={t("settings.optionIsMeta")} hint={t("settings.optionIsMetaHint")}>
-          <Switch label={t("settings.optionIsMeta")} checked={s.optionIsMeta} onChange={(v) => set({ optionIsMeta: v })} />
-        </Row>
-      )}
+      <Row label={t("settings.notifyLongCommands")} hint={t("settings.notifyLongCommandsHint")}>
+        <Switch label={t("settings.notifyLongCommands")} checked={s.notifyLongCommands} onChange={(v) => set({ notifyLongCommands: v })} />
+      </Row>
+      <Row label={t("settings.screenReader")} hint={t(platform === "macos" ? "settings.screenReaderHintMac" : "settings.screenReaderHintWindows")} htmlFor="screen-reader">
+        <select id="screen-reader" value={s.screenReaderMode} onChange={(e) => set({ screenReaderMode: e.target.value as ScreenReaderMode })}>
+          <option value="auto">{t("settings.screenReader.auto")}</option>
+          <option value="on">{t("settings.screenReader.on")}</option>
+          <option value="off">{t("settings.screenReader.off")}</option>
+        </select>
+      </Row>
       <Row label={t("settings.scrollback")} hint={t("settings.scrollbackHint")} htmlFor="scrollback">
         <NumberField id="scrollback" label={t("settings.scrollback")} value={s.scrollback} min={LIMITS.scrollback[0]} max={LIMITS.scrollback[1]} step={1000} onChange={(v) => set({ scrollback: Math.round(v) })} />
       </Row>
@@ -266,6 +273,16 @@ function Appearance() {
         {s.accent && <button className="link" onClick={() => set({ accent: "" })}>{t("settings.reset")}</button>}
       </Row>
 
+      <Row label={t("settings.blur")} hint={t(platform === "macos" ? "settings.blurHintMac" : "settings.blurHintWindows")}>
+        <Switch label={t("settings.blur")} checked={s.backgroundBlur} onChange={(v) => set({ backgroundBlur: v })} />
+      </Row>
+      {s.backgroundBlur && (
+        <Row label={t("settings.opacity")} htmlFor="opacity">
+          <input id="opacity" type="range" min={LIMITS.backgroundOpacity[0]} max={LIMITS.backgroundOpacity[1]} step={0.05} value={s.backgroundOpacity} onChange={(e) => set({ backgroundOpacity: Number(e.target.value) })} />
+          <span className="muted">{Math.round(s.backgroundOpacity * 100)}%</span>
+        </Row>
+      )}
+
       <h3>{t("settings.text")}</h3>
       <Row label={t("settings.font")} hint={t("settings.fontHint")} htmlFor="font">
         <input id="font" className="text" list="fonts" defaultValue={s.fontFamily} onBlur={(e) => e.target.value.trim() && set({ fontFamily: e.target.value.trim() })} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} />
@@ -311,7 +328,7 @@ function Appearance() {
 }
 
 function Profiles() {
-  const { settings: s, found } = useApp();
+  const { settings: s, found, platform } = useApp();
   const [selected, setSelected] = useState(s.defaultProfile || s.profiles[0]?.id || "");
   const p = s.profiles.find((x) => x.id === selected) ?? s.profiles[0];
   const themes = app.allThemes();
@@ -322,7 +339,7 @@ function Profiles() {
     const id = `profile-${n}`;
     const fresh: Profile = base
       ? { ...base, id, name: t("profile.copyName", { name: base.name }) }
-      : { id, name: t("profile.newName", { n }), program: s.profiles[0]?.program ?? "", args: [], cwd: "", env: {}, icon: "terminal", theme: "", shellIntegration: true };
+      : { id, name: t("profile.newName", { n }), program: s.profiles[0]?.program ?? "", args: [], cwd: "", env: {}, icon: "terminal", theme: "", shellIntegration: true, runAsAdmin: false };
     set({ profiles: [...s.profiles, fresh] });
     setSelected(id);
   };
@@ -404,6 +421,11 @@ function Profiles() {
             <Row label={t("profile.shellIntegration")} hint={t("profile.shellIntegrationHint")}>
               <Switch label={t("profile.shellIntegration")} checked={p.shellIntegration} onChange={(v) => change({ shellIntegration: v })} />
             </Row>
+            {platform === "windows" && (
+              <Row label={t("profile.runAsAdmin")} hint={t("profile.runAsAdminHint")}>
+                <Switch label={t("profile.runAsAdmin")} checked={p.runAsAdmin} onChange={(v) => change({ runAsAdmin: v })} />
+              </Row>
+            )}
             <div className="button-row">
               <button className="button" disabled={p.id === s.defaultProfile} onClick={() => set({ defaultProfile: p.id })}>{t("profile.makeDefault")}</button>
               <button className="button" onClick={() => add(p)}>{t("profile.duplicate")}</button>
@@ -470,6 +492,45 @@ function KeyboardSection() {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+/** What exists on one system only. */
+function Device() {
+  const { settings: s, platform } = useApp();
+  return (
+    <section>
+      <h3>{t("settings.device")}</h3>
+      <p className="hint">{t(platform === "macos" ? "device.introMac" : "device.introWindows")}</p>
+      {platform === "macos" && (
+        <>
+          <Row label={t("menu.secureKeyboardEntry")} hint={t("device.secureHint")}>
+            <Switch label={t("menu.secureKeyboardEntry")} checked={s.secureKeyboardEntry} onChange={(v) => set({ secureKeyboardEntry: v })} />
+          </Row>
+          <Row label={t("device.optionKeys")} hint={t("device.optionKeysHint")}>
+            <div className="segmented" role="radiogroup" aria-label={t("device.optionKeys")}>
+              {(["none", "left", "right", "both"] as OptionAsMeta[]).map((o) => (
+                <button key={o} role="radio" aria-checked={s.optionAsMeta === o} className={s.optionAsMeta === o ? "on" : ""} onClick={() => set({ optionAsMeta: o })}>
+                  {tk(`device.option.${o}`)}
+                </button>
+              ))}
+            </div>
+          </Row>
+          <p className="hint">{t("device.finderHint")}</p>
+        </>
+      )}
+      {platform === "windows" && (
+        <>
+          <Row label={t("device.ctrlC")} hint={t("device.ctrlCHint")}>
+            <Switch label={t("device.ctrlC")} checked={s.ctrlCCopies} onChange={(v) => set({ ctrlCCopies: v })} />
+          </Row>
+          <Row label={t("device.ctrlV")}>
+            <Switch label={t("device.ctrlV")} checked={s.ctrlVPastes} onChange={(v) => set({ ctrlVPastes: v })} />
+          </Row>
+          <p className="hint">{t("device.explorerHint")}</p>
+        </>
+      )}
     </section>
   );
 }

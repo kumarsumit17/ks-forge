@@ -18,9 +18,13 @@ export interface Profile {
   /** Empty: the app's theme. */
   theme: string;
   shellIntegration: boolean;
+  /** Windows: open this profile in an elevated copy of the app. */
+  runAsAdmin: boolean;
 }
 
 export type CursorStyle = "block" | "bar" | "underline";
+export type OptionAsMeta = "none" | "left" | "right" | "both";
+export type ScreenReaderMode = "auto" | "on" | "off";
 export type LanguageChoice = "system" | "en" | "hi";
 
 export interface Settings {
@@ -47,7 +51,21 @@ export interface Settings {
   confirmPaste: boolean;
   confirmClose: boolean;
   rightClickPaste: boolean;
-  optionIsMeta: boolean;
+  /** macOS: which Option keys act as Meta (Esc + key) instead of typing special characters. */
+  optionAsMeta: OptionAsMeta;
+  /** macOS: Secure Keyboard Entry. */
+  secureKeyboardEntry: boolean;
+  /** Windows: Ctrl+C copies when text is selected; Ctrl+V pastes. */
+  ctrlCCopies: boolean;
+  ctrlVPastes: boolean;
+  /** A translucent background with the system's blur behind it. */
+  backgroundBlur: boolean;
+  /** 0.5–1: how opaque the background is while blur is on. */
+  backgroundOpacity: number;
+  /** A notification when a command that ran a while ends while the window is in the back. */
+  notifyLongCommands: boolean;
+  /** Screen reader support in the terminal: "auto" follows VoiceOver / Narrator / NVDA. */
+  screenReaderMode: ScreenReaderMode;
   newTabsInCurrentFolder: boolean;
   /** Reopen the windows, tabs and folders of the last run at start. */
   restoreSession: boolean;
@@ -142,7 +160,14 @@ export function defaults(platform: Platform): Settings {
     confirmPaste: true,
     confirmClose: true,
     rightClickPaste: platform === "windows",
-    optionIsMeta: false,
+    optionAsMeta: "none",
+    secureKeyboardEntry: false,
+    ctrlCCopies: platform === "windows",
+    ctrlVPastes: platform === "windows",
+    backgroundBlur: false,
+    backgroundOpacity: 0.85,
+    notifyLongCommands: true,
+    screenReaderMode: "auto",
     newTabsInCurrentFolder: true,
     restoreSession: true,
     showTabIcons: true,
@@ -159,10 +184,11 @@ export const LIMITS = {
   lineHeight: [0.8, 2.5],
   padding: [0, 48],
   scrollback: [0, 200000],
+  backgroundOpacity: [0.5, 1],
 } as const;
 
 export function profileFromShell(s: FoundShell): Profile {
-  return { id: s.id, name: s.name, program: s.program, args: [...s.args], cwd: "", env: {}, icon: s.icon || "terminal", theme: "", shellIntegration: true };
+  return { id: s.id, name: s.name, program: s.program, args: [...s.args], cwd: "", env: {}, icon: s.icon || "terminal", theme: "", shellIntegration: true, runAsAdmin: false };
 }
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -188,6 +214,7 @@ function parseProfile(v: unknown): Profile | null {
     icon: typeof p.icon === "string" && (TAB_ICONS as readonly string[]).includes(p.icon) ? p.icon : "terminal",
     theme: typeof p.theme === "string" ? p.theme : "",
     shellIntegration: p.shellIntegration !== false,
+    runAsAdmin: p.runAsAdmin === true,
   };
 }
 
@@ -230,9 +257,14 @@ export function normalize(raw: unknown, found: FoundShell[], platform: Platform)
   take("cursorBlink", isBool);
   take("padding", inRange(...LIMITS.padding), (v) => Math.round(v as number));
   take("scrollback", inRange(...LIMITS.scrollback), (v) => Math.round(v as number));
-  for (const k of ["copyOnSelect", "confirmPaste", "confirmClose", "rightClickPaste", "optionIsMeta", "newTabsInCurrentFolder", "restoreSession", "showTabIcons", "autoUpdate"] as const) {
+  for (const k of ["copyOnSelect", "confirmPaste", "confirmClose", "rightClickPaste", "secureKeyboardEntry", "ctrlCCopies", "ctrlVPastes", "backgroundBlur", "notifyLongCommands", "newTabsInCurrentFolder", "restoreSession", "showTabIcons", "autoUpdate"] as const) {
     take(k, isBool);
   }
+  take("optionAsMeta", (v) => v === "none" || v === "left" || v === "right" || v === "both");
+  // v0.1.0 had one switch for both Option keys.
+  if (!("optionAsMeta" in src) && src.optionIsMeta === true) out.optionAsMeta = "both";
+  take("backgroundOpacity", inRange(...LIMITS.backgroundOpacity), (v) => Math.round((v as number) * 100) / 100);
+  take("screenReaderMode", (v) => v === "auto" || v === "on" || v === "off");
   take("defaultProfile", isStr);
   take("hiddenProfiles", (v) => Array.isArray(v), (v) => (v as unknown[]).filter((x): x is string => typeof x === "string"));
   take("keybindings", (v) => typeof v === "object" && v !== null && !Array.isArray(v), (v) => {

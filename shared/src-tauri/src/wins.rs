@@ -65,6 +65,11 @@ pub fn front(app: &AppHandle) -> Option<tauri::WebviewWindow> {
     all.values().find(|w| w.is_focused().unwrap_or(false)).cloned().or_else(|| all.values().next().cloned())
 }
 
+/// Whether a command line asks for a new window (`--new-window`, the jump list's first task).
+pub fn wants_new_window(args: &[String]) -> bool {
+    args.iter().any(|a| a == "--new-window")
+}
+
 /// Reads `-d <folder>` / `--dir <folder>` and `-p <profile>` / `--profile <profile>` from a
 /// command line (the program name first). None when neither is given.
 pub fn request_from_args(args: &[String]) -> Option<Request> {
@@ -77,7 +82,7 @@ pub fn request_from_args(args: &[String]) -> Option<Request> {
             _ => {}
         }
     }
-    if r.cwd.is_none() && r.profile.is_none() { None } else { Some(r) }
+    if r.cwd.is_none() && r.profile.is_none() && !wants_new_window(args) { None } else { Some(r) }
 }
 
 
@@ -98,5 +103,7 @@ mod tests {
         let r = request_from_args(&v(&["ks-forge", "--dir", "/tmp"])).unwrap();
         assert_eq!(r.cwd.as_deref(), Some("/tmp"));
         assert_eq!(request_from_args(&v(&["ks-forge", "-d"])), None);
+        assert_eq!(request_from_args(&v(&["ks-forge.exe", "--new-window"])), Some(Request::default()));
+        assert!(wants_new_window(&v(&["ks-forge.exe", "--new-window"])));
     }
 }

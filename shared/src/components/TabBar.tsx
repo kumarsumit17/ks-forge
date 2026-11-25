@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { app, type Tab } from "../lib/app.ts";
 import { useApp } from "../lib/useApp.ts";
 import { t } from "../lib/i18n.ts";
@@ -9,8 +10,14 @@ import { Icon } from "./Icon.tsx";
 
 export function TabBar() {
   const s = useApp();
-  const drag = useRef<number | null>(null);
+  // Tabs are reordered by pointer, not HTML drag and drop (which the window's file-drop
+  // handling takes over on Windows).
+  const drag = useRef<{ from: number; x: number; moved: boolean } | null>(null);
   const [over, setOver] = useState<number | null>(null);
+  const indexAt = (x: number, y: number) => {
+    const el = document.elementFromPoint(x, y)?.closest("[data-tab-index]");
+    return el ? Number(el.getAttribute("data-tab-index")) : null;
+  };
   const bindings = effectiveBindings(s.settings.keybindings, s.platform);
 
   const profileMenu = (x: number, y: number) =>
@@ -53,23 +60,32 @@ export function TabBar() {
               aria-selected={active}
               className={"tab" + (active ? " active" : "") + (over === i ? " drop" : "")}
               style={tab.color ? ({ "--tab-color": tab.color } as React.CSSProperties) : undefined}
-              draggable={s.renaming !== tab.id}
-              onDragStart={() => (drag.current = i)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setOver(i);
-              }}
-              onDragLeave={() => setOver(null)}
-              onDrop={() => {
-                if (drag.current !== null) app.moveTab(drag.current, i);
-                drag.current = null;
-                setOver(null);
-              }}
-              onMouseDown={(e) => {
+              data-tab-index={i}
+              onPointerDown={(e) => {
                 if (e.button === 1) {
                   e.preventDefault();
                   void app.closeTab(tab.id);
-                } else if (e.button === 0) app.selectTab(tab.id);
+                  return;
+                }
+                if (e.button !== 0 || s.renaming === tab.id) return;
+                app.selectTab(tab.id);
+                drag.current = { from: i, x: e.clientX, moved: false };
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e) => {
+                const d = drag.current;
+                if (!d) return;
+                if (!d.moved && Math.abs(e.clientX - d.x) < 6) return;
+                d.moved = true;
+                setOver(indexAt(e.clientX, e.clientY));
+              }}
+              onPointerUp={(e) => {
+                const d = drag.current;
+                drag.current = null;
+                setOver(null);
+                if (!d?.moved) return;
+                const to = indexAt(e.clientX, e.clientY);
+                if (to !== null) app.moveTab(d.from, to);
               }}
               onDoubleClick={() => { app.selectTab(tab.id); void app.run("renameTab"); }}
               onContextMenu={(e) => {
@@ -131,6 +147,33 @@ export function TabBar() {
           <Icon name="settings" />
         </button>
       </div>
+      {s.platform === "windows" && <CaptionButtons />}
+    </div>
+  );
+}
+
+/** Windows: the minimise, maximise and close buttons, in our bar instead of a system title bar. */
+function CaptionButtons() {
+  const [maximized, setMaximized] = useState(false);
+  useEffect(() => {
+    const w = getCurrentWindow();
+    const update = () => void w.isMaximized().then(setMaximized).catch(() => {});
+    update();
+    const off = w.onResized(update);
+    return () => void off.then((f) => f());
+  }, []);
+  const w = getCurrentWindow();
+  return (
+    <div className="caption-buttons">
+      <button className="caption" aria-label={t("window.minimize")} title={t("window.minimize")} onClick={() => void w.minimize()}>
+        <Icon name="minus" size={16} />
+      </button>
+      <button className="caption" aria-label={maximized ? t("window.restore") : t("window.maximize")} title={maximized ? t("window.restore") : t("window.maximize")} onClick={() => void w.toggleMaximize()}>
+        <Icon name={maximized ? "copy" : "square"} size={13} />
+      </button>
+      <button className="caption close" aria-label={t("window.close")} title={t("window.close")} onClick={() => void w.close()}>
+        <Icon name="x" size={16} />
+      </button>
     </div>
   );
 }

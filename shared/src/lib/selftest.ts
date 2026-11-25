@@ -117,7 +117,34 @@ export async function runSelfTest(): Promise<void> {
     if (saved.panes[pane]?.cwd !== app.sessions.get(pane)!.cwd) throw new Error("layout lost a folder");
     step("session layout ok");
 
-    // 7. Closing a pane gives its space back.
+    // 7. The running-program check (macOS: foreground process group; Windows: the shell's
+    //    child processes), used before closing a pane.
+    const sleeper = info.platform === "windows" ? "ping -n 8 127.0.0.1 > NUL\r" : "sleep 4\r";
+    const ptyId = app.sessions.get(pane)!.ptyId!;
+    await api.write(ptyId, sleeper);
+    await until("running program seen", async () => (await api.busy([ptyId])).includes(ptyId), 10000);
+    await until("program ended", async () => !(await api.busy([ptyId])).includes(ptyId), 20000);
+    step("running-program check ok");
+
+    // 8. This system's integrations: blur on and off, and the Dock menu (macOS) or the
+    //    jump list and process list (Windows).
+    await api.setBlur(true);
+    await api.setBlur(false);
+    const check = await (async () => {
+      const end = Date.now() + 15000;
+      let last = "";
+      while (Date.now() < end) {
+        last = await api.platformCheck();
+        if (!last.includes("pending")) break;
+        await sleep(300);
+      }
+      return last;
+    })();
+    if (info.platform === "macos" && !check.includes("dock=true")) throw new Error(`Dock menu missing: ${check}`);
+    if (info.platform === "windows" && !(check.includes("jumplist=ok") && check.includes("processList=ok"))) throw new Error(`Windows integration: ${check}`);
+    step(`platform ${check}`);
+
+    // 9. Closing a pane gives its space back.
     await app.closePane(panes[2], true);
     if (leaves(app.tab!.root).length !== 2) throw new Error("close pane failed");
     step("close pane ok");

@@ -89,7 +89,8 @@ pub fn detect() -> Vec<FoundShell> {
     }
     if let Some(wsl) = find(&["wsl.exe"], &[&format!("{root}\\System32")]) {
         for d in wsl_distributions(&wsl) {
-            out.push(shell(&format!("wsl-{d}"), &d, &wsl, &["-d", &d], "box"));
+            // Start in the Linux home folder rather than the Windows one.
+            out.push(shell(&format!("wsl-{d}"), &d, &wsl, &["-d", &d, "--cd", "~"], "box"));
         }
     }
     mark_default(&mut out, None);

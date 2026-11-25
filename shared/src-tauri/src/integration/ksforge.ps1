@@ -24,4 +24,15 @@ if (-not $global:__ksfIntegrated) {
     $global:LASTEXITCODE = $code
     $out + $rest
   }
+  # A command-start mark (OSC 133;C) when Enter runs a line, so the app can time commands.
+  # Only when Enter is still PSReadLine's own AcceptLine, so a user's binding is kept.
+  if (Get-Module -Name PSReadLine) {
+    $h = Get-PSReadLineKeyHandler -Chord Enter -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($h -and $h.Function -eq 'AcceptLine') {
+      Set-PSReadLineKeyHandler -Chord Enter -ScriptBlock {
+        [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+        [Console]::Write("$([char]27)]133;C$([char]7)")
+      }
+    }
+  }
 }

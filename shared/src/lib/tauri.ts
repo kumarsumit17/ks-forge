@@ -12,6 +12,7 @@ export interface AppInfo {
   home: string;
   settingsPath: string;
   repo: string;
+  elevated: boolean;
 }
 
 /** What a window was opened with (src-tauri/src/wins.rs). */
@@ -74,6 +75,13 @@ export const api = {
   newWindow: (cwd?: string, profile?: string) => invoke<string>("window_new", { cwd: cwd || null, profile: profile || null }),
   saveSession: (layout: unknown) => invoke<void>("session_save", { layout }),
   quitApp: () => invoke<void>("app_quit"),
+  menuUpdate: (text: Record<string, { label: string; shortcut: string }>, secure: boolean) => invoke<void>("menu_update", { text, secure }),
+  profilesChanged: (profiles: [string, string][], newWindow: string, newTab: string) => invoke<void>("profiles_changed", { profiles, newWindow, newTab }),
+  secureInput: (on: boolean) => invoke<void>("secure_input", { on }),
+  setBlur: (on: boolean) => invoke<void>("window_set_blur", { on }),
+  screenReaderActive: () => invoke<boolean>("screen_reader_active"),
+  runElevated: (profile: string) => invoke<boolean>("run_elevated", { profile }),
+  platformCheck: () => invoke<string>("selftest_platform"),
   readSettings: () => invoke<string | null>("settings_read"),
   writeSettings: (text: string) => invoke<void>("settings_write", { text }),
   openSettingsFile: () => invoke<void>("settings_open_file"),
@@ -96,6 +104,11 @@ export function onSettingsFile(f: (text: string) => void): Promise<UnlistenFn> {
 /** Menu commands go to the window in front only. */
 export function onMenu(f: (id: string) => void): Promise<UnlistenFn> {
   return getCurrentWebviewWindow().listen<string>("menu-action", (e) => f(e.payload));
+}
+
+/** A folder or profile to open here (Dock menu, Finder, a second launch on Windows). */
+export function onOpenRequest(f: (r: WindowRequest) => void): Promise<UnlistenFn> {
+  return getCurrentWebviewWindow().listen<WindowRequest>("open-request", (e) => f(e.payload));
 }
 
 /** Another window changed the settings. */

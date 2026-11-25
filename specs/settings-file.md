@@ -36,12 +36,17 @@ One `settings.json`, in the app's config folder: `~/Library/Application Support/
 | `confirmPaste` | `true` | ask before pasting several lines or `sudo` |
 | `confirmClose` | `true` | ask before closing a running program (macOS can tell; Windows cannot) |
 | `rightClickPaste` | Windows `true`, macOS `false` | right-click copies a selection or pastes; off shows a menu |
-| `optionIsMeta` | `false` | macOS only |
+| `optionAsMeta` | `"none"` | macOS: `none`, `left`, `right` or `both` Option keys act as Meta (v0.1.0's `optionIsMeta: true` reads as `both`) |
+| `secureKeyboardEntry` | `false` | macOS: Secure Keyboard Entry (also in the app menu) |
+| `ctrlCCopies`, `ctrlVPastes` | Windows `true`, macOS `false` | Windows: Ctrl+C copies selected text (otherwise interrupts), Ctrl+V pastes |
+| `backgroundBlur`, `backgroundOpacity` | `false`, `0.85` | see-through background with the system's blur; opacity 0.5–1 |
+| `notifyLongCommands` | `true` | a notification when a command of 10 s or more ends while the window is in the back |
+| `screenReaderMode` | `"auto"` | `auto` (follows VoiceOver, Narrator, NVDA), `on`, `off` |
 | `newTabsInCurrentFolder` | `true` | needs shell integration |
 | `restoreSession` | `true` | reopen the windows, tabs and folders of the last run (`session.json` beside the app's data) |
 | `showTabIcons` | `true` | |
 | `defaultProfile` | the login shell (macOS) or the first found | profile id |
-| `profiles` | the shells found | `id`, `name`, `program`, `args`, `cwd`, `env`, `icon`, `theme`, `shellIntegration` |
+| `profiles` | the shells found | `id`, `name`, `program`, `args`, `cwd`, `env`, `icon`, `theme`, `shellIntegration`, `runAsAdmin` (Windows) |
 | `hiddenProfiles` | `[]` | ids of found shells removed from the list |
 | `keybindings` | `{}` | action id → shortcut (`"cmd+shift+t"`, `"ctrl+alt+left"`, `"mod+d"`); `""` removes a default |
 | `autoUpdate` | `true` | the daily update check |

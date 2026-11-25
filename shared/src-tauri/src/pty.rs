@@ -47,7 +47,6 @@ struct Session {
     master: Mutex<Box<dyn MasterPty + Send>>,
     writer: Mutex<Box<dyn Write + Send>>,
     killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
-    #[cfg_attr(not(unix), allow(dead_code))]
     pid: Option<u32>,
 }
 
@@ -149,9 +148,9 @@ impl Ptys {
         }
     }
 
-    /// The sessions where a program other than the shell itself is running in front
-    /// (macOS: the terminal's foreground process group is not the shell's). On Windows
-    /// ConPTY does not tell, so none are reported.
+    /// The sessions where a program other than the shell itself is running (macOS: the
+    /// terminal's foreground process group is not the shell's; Windows: the shell has a
+    /// child process).
     pub fn busy(&self, ids: &[u32]) -> Vec<u32> {
         ids.iter().copied().filter(|id| self.get(*id).is_some_and(|s| is_busy(&s))).collect()
     }
@@ -164,7 +163,13 @@ fn is_busy(s: &Session) -> bool {
     leader.is_some_and(|l| l > 0 && l as u32 != pid)
 }
 
-#[cfg(not(unix))]
+/// ConPTY does not report a foreground program, so the shell's child processes tell.
+#[cfg(windows)]
+fn is_busy(s: &Session) -> bool {
+    s.pid.is_some_and(crate::platform::has_running_children)
+}
+
+#[cfg(not(any(unix, windows)))]
 fn is_busy(_: &Session) -> bool {
     false
 }
