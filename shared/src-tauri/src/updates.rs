@@ -7,6 +7,11 @@
 //! The decisions (versions, the daily schedule, reading the release, which file, the
 //! checksum rule) are the suite's shared ones from `ks_utility::app_update`
 //! (ks-utility `specs/app-update.md`); this file does the request, download and opening.
+//!
+//! Each platform has its own version (`mac-vX.Y.Z`, `windows-vX.Y.Z`; a plain `vX.Y.Z`
+//! releases both), and a platform release is not marked latest, so the release list is read
+//! and the newest release for this platform is taken (KS-Suite specs/versioning-signing.md,
+//! "Platform tags").
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -83,13 +88,14 @@ impl Updater {
 
     pub async fn check(&self) -> Result<Check, Msg> {
         let repo = repo();
-        let json = fetch_text(&repo).await.map_err(|e| msg!("common.appUpdate.checkFailed", detail = e))?;
+        let platform = Platform::current().ok_or_else(|| msg!("common.appUpdate.unreadable"))?;
+        let json = fetch_text(&repo.releases_api_url(), &repo).await.map_err(|e| msg!("common.appUpdate.checkFailed", detail = e))?;
         let _ = std::fs::create_dir_all(&self.dir);
         if let Ok(data) = serde_json::to_vec(&State { last_check: now_secs() }) {
             let _ = ks_utility::atomic::write_atomic(&self.dir.join(STATE_FILE), &data);
         }
-        let release = app_update::parse_release(&json, &repo).ok_or_else(|| msg!("common.appUpdate.unreadable"))?;
-        let asset = Platform::current().and_then(|p| app_update::pick_asset(&release.assets, p, &repo));
+        let release = app_update::parse_releases(&json, &repo, platform).ok_or_else(|| msg!("common.appUpdate.unreadable"))?.release;
+        let asset = app_update::pick_asset(&release.assets, platform, &repo);
         let (found, check) = match app_update::decide(&release, &self.current, asset) {
             Outcome::UpToDate { .. } => (None, Check::UpToDate { version: self.current.clone() }),
             Outcome::NoInstaller { version } => (None, Check::NoInstaller { version }),
@@ -139,9 +145,9 @@ impl Updater {
     }
 }
 
-async fn fetch_text(repo: &Repo) -> Result<String, String> {
+async fn fetch_text(url: &str, repo: &Repo) -> Result<String, String> {
     let client = Updater::client()?;
-    let mut req = client.get(repo.latest_release_api_url());
+    let mut req = client.get(url);
     for (k, v) in repo.request_headers() {
         req = req.header(k, v);
     }
@@ -236,6 +242,31 @@ mod tests {
         assert_eq!(mac.name, "ks-forge-v0.2.0-macos-arm64.dmg");
         let win = app_update::pick_asset(&r.assets, Platform::WindowsX64, &repo).expect("windows file");
         assert_eq!(win.name, "ks-forge-v0.2.0-windows-x64-setup.exe");
+    }
+
+    fn entry(tag: &str, names: &[&str]) -> String {
+        let assets: Vec<String> = names
+            .iter()
+            .map(|n| format!(r#"{{"name":"{n}","size":10,"browser_download_url":"https://github.com/{REPO}/releases/download/{tag}/{n}","digest":"sha256:{}"}}"#, "b".repeat(64)))
+            .collect();
+        format!(r#"{{"tag_name":"{tag}","draft":false,"prerelease":false,"assets":[{}]}}"#, assets.join(","))
+    }
+
+    #[test]
+    fn each_platform_takes_its_own_newest_release_from_the_list() {
+        let repo = repo();
+        let list = format!(
+            "[{},{},{}]",
+            entry("windows-v0.4.0", &["ks-forge-v0.4.0-windows-x64-setup.exe"]),
+            entry("mac-v0.3.0", &["ks-forge-v0.3.0-macos-arm64.dmg"]),
+            entry("v0.2.0", &["ks-forge-v0.2.0-macos-arm64.dmg", "ks-forge-v0.2.0-windows-x64-setup.exe"])
+        );
+        let mac = app_update::parse_releases(&list, &repo, Platform::MacosArm64).unwrap();
+        assert_eq!((mac.tag.as_str(), mac.release.version.as_str()), ("mac-v0.3.0", "0.3.0"));
+        let win = app_update::parse_releases(&list, &repo, Platform::WindowsX64).unwrap();
+        assert_eq!((win.tag.as_str(), win.release.version.as_str()), ("windows-v0.4.0", "0.4.0"));
+        let asset = app_update::pick_asset(&mac.release.assets, Platform::MacosArm64, &repo).unwrap();
+        assert_eq!(asset.name, "ks-forge-v0.3.0-macos-arm64.dmg");
     }
 
     #[test]

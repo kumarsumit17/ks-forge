@@ -1,5 +1,6 @@
 # 2026-11-25
 
+* **Update**: [Per-platform optimization plan](plan-per-platform.md) and [Releasing](release.md): platform tags again (suite rule changed by the owner): `mac-vX.Y.Z` and `windows-vX.Y.Z` release one system and are not latest; plain `vX.Y.Z` releases both; `v0.2.0` is the bridge release; the updater reads the release list; step 1 built.
 * **Update**: ks-utility pin moved to v0.10.1 (no code changes since v0.10.0; adds KS Forge's 13 Hindi terms to the term list, marked owner review).
 * **Update**: [Per-platform optimization plan](plan-per-platform.md): versioning follows the suite rule (one `vX.Y.Z` for both builds); the platform-tag option and bridge release are removed; the description now says one version for both builds, each tuned to its OS.
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) steps 3 (macOS) and 4 (Windows) built; [Settings file](settings-file.md): `optionAsMeta`, `secureKeyboardEntry`, `ctrlCCopies`, `ctrlVPastes`, `backgroundBlur`, `backgroundOpacity`, `notifyLongCommands`, `screenReaderMode`, `runAsAdmin`; [Dependencies](dependencies.md): tauri-plugin-notification, tauri-plugin-single-instance (Windows), windows (Windows), objc2 crates (macOS), all but the plugins already in the tree.

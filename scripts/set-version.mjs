@@ -2,20 +2,51 @@
 // fresh checkout; the repository keeps the placeholder 0.0.0 (versions come from git tags,
 // never hardcoded: KS-Suite specs/versioning-signing.md).
 //
-//   node scripts/set-version.mjs <tag> [root]      e.g. v1.2.3
+//   node scripts/set-version.mjs <tag> [root]      e.g. v1.2.3, mac-v1.3.0, windows-v1.4.0
 //
-// Accepts only vMAJOR.MINOR.PATCH (no leading zeros, no suffix). Every file is checked before
+// Accepts vMAJOR.MINOR.PATCH (both platforms) or mac-v… / windows-v… (one platform; KS-Suite
+// specs/versioning-signing.md, "Platform tags"), no leading zeros, no suffix. Every file is checked before
 // any is written: each must still hold exactly the placeholder (or, for the JSON files, no
 // version key), otherwise nothing is written and the script exits 1.
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const TAG = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+export const TAG = /^(?:(mac|windows)-)?v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export function versionOf(tag) {
-  if (!TAG.test(tag ?? "")) throw new Error(`"${tag}" is not a release tag (expected vMAJOR.MINOR.PATCH, e.g. v1.2.3)`);
-  return tag.slice(1);
+  if (!TAG.test(tag ?? "")) throw new Error(`"${tag}" is not a release tag (expected vX.Y.Z, mac-vX.Y.Z or windows-vX.Y.Z)`);
+  return tag.slice(tag.indexOf("v") + 1);
+}
+
+/** "all" for a plain tag, else "mac" or "windows". */
+export function platformOf(tag) {
+  const m = TAG.exec(tag ?? "");
+  if (!m) throw new Error(`"${tag}" is not a release tag`);
+  return m[1] ?? "all";
+}
+
+const cmp = (a, b) => {
+  const x = a.split(".").map(Number);
+  const y = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return 0;
+};
+
+/**
+ * Why a new tag's version is too low, or null: each platform's next version is higher than
+ * its own latest tag and the latest plain tag; a plain tag is higher than every tag.
+ */
+export function tooLow(tag, existing) {
+  const platform = platformOf(tag);
+  const version = versionOf(tag);
+  for (const t of existing) {
+    if (t === tag || !TAG.test(t)) continue;
+    const p = platformOf(t);
+    const counts = platform === "all" || p === "all" || p === platform;
+    if (counts && cmp(versionOf(t), version) >= 0) return `${tag} must be higher than ${t}`;
+  }
+  return null;
 }
 
 export const eolOf = (text) => (text.includes("\r\n") ? "\r\n" : "\n");

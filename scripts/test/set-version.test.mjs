@@ -4,13 +4,27 @@ import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { setVersion, versionOf, edits } from "../set-version.mjs";
+import { setVersion, versionOf, edits, platformOf, tooLow } from "../set-version.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-test("only plain release tags are versions", () => {
+test("plain and platform tags are versions", () => {
   assert.equal(versionOf("v1.2.3"), "1.2.3");
-  for (const bad of ["1.2.3", "v1.2", "v1.2.3-beta", "v01.2.3", "", undefined]) assert.throws(() => versionOf(bad));
+  assert.equal(versionOf("mac-v0.3.0"), "0.3.0");
+  assert.equal(versionOf("windows-v0.4.0"), "0.4.0");
+  assert.equal(platformOf("v1.2.3"), "all");
+  assert.equal(platformOf("mac-v1.2.3"), "mac");
+  for (const bad of ["1.2.3", "v1.2", "v1.2.3-beta", "v01.2.3", "android-v1.0.0", "mac-1.0.0", "", undefined]) assert.throws(() => versionOf(bad));
+});
+
+test("a new tag is higher than its platform's tags and every plain tag", () => {
+  const tags = ["v0.1.0", "v0.2.0", "mac-v0.3.0"];
+  assert.equal(tooLow("mac-v0.4.0", tags), null);
+  assert.equal(tooLow("windows-v0.3.0", tags), null);
+  assert.match(tooLow("mac-v0.2.5", tags), /higher than mac-v0\.3\.0/);
+  assert.match(tooLow("windows-v0.2.0", tags), /higher than v0\.2\.0/);
+  assert.match(tooLow("v0.3.0", tags), /higher than mac-v0\.3\.0/);
+  assert.equal(tooLow("v0.4.0", tags), null);
 });
 
 test("the version goes into every file, and a second run changes nothing", () => {
