@@ -1,6 +1,6 @@
 # Hindi terms for the owner's review
 
-Terms used in KS Forge's Hindi text that are not yet in ks-utility's term list (`specs/hindi-style.md`). On 2026-11-25 ks-utility added these 13 to its term list, marked owner review (its `dev`, not yet tagged). Once a ks-utility tag has them and the owner approves them, this page goes. Paste (पेस्ट करें) was already in the list.
+Terms used in KS Forge's Hindi text that are not yet in ks-utility's term list (`specs/hindi-style.md`). On 2026-11-25 ks-utility added these 13 to its term list, marked owner review, in tag v0.10.1, which KS Forge now pins. Once the owner approves them, this page goes. Paste (पेस्ट करें) was already in the list.
 
 | English | Hindi used | Status |
 |---|---|---|
