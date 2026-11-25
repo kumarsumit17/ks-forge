@@ -1,0 +1,96 @@
+---
+type: Plan
+title: Per-platform optimization plan
+description: Plan for making each KS Forge build (macOS, Windows) its own app with its own version, tuned to its OS for look, input, performance, packaging, OS integrations and accessibility.
+tags: [plan, platforms, macos, windows, accessibility, performance]
+---
+
+# Per-platform optimization plan
+
+**Status: draft, waiting for the owner's approval and the decisions in section 3.** The suite rule: every platform build is its own app with its own version, the best it can be on its OS ([Platform folders](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/platform-folders.md)). Modelled on ks-jaiplayer's plan.
+
+KS Forge targets macOS and Windows only (`tv/google-tv`, `mobile/*` stay empty). The terminal core stays written once in `shared/`: the Rust PTY layer, settings, shell integration and the React and xterm.js interface. What differs per OS moves to its platform folder: Tauri config overrides (already there) and, new, platform-only Rust in `desktop/mac/src/` and `desktop/windows/src/`, compiled into the one crate with `#[cfg(target_os)]` and `#[path]`, so `shared/` keeps no code for one platform only.
+
+## 1. Audit: what each build does today (v0.1.0, 2026-11-25)
+
+| | macOS (`desktop/mac`) | Windows (`desktop/windows`) |
+|---|---|---|
+| Window and look | Overlay title bar: the traffic lights sit in our tab bar (`titleBarStyle: Overlay`); window colours follow the terminal theme; no background blur | Native **light** title bar above our tab bar even with a dark theme, so two bars use about 70 px; no Mica; colours follow the theme below the title bar |
+| Menus | Own menu bar: app (About, Settings ⌘,, Hide, Quit ⌘Q asks about running programs), Edit (Copy, Paste), Window. No File or Shell menu, no Dock menu | None (no menu bar, as Windows terminals usually have), only our tab bar and right-click menu |
+| Shortcuts | ⌘ shortcuts (⌘T, ⌘D, ⌘W, ⌘K, ⌘F, ⌘⇧P); Option as Meta is a setting | Ctrl+Shift shortcuts (Ctrl+Shift+T/D/E/W/F/P); **Ctrl+C / Ctrl+V do not copy or paste** (Windows Terminal does this when text is selected) |
+| Shells | Login shell found from `$SHELL`, zsh/bash/fish, `-l`; `LANG` set when missing | pwsh, Windows PowerShell, cmd, Git Bash, WSL distributions; no "run as administrator" profile |
+| PTY | `openpty`; running-program check before close works | ConPTY; **running-program check does not work** (always "not busy"); exit reported after a 1 s grace; start-up cursor query handled |
+| Shell integration | zsh, bash, fish: folder, prompt marks, exit status | PowerShell: folder, prompt, exit status (no command-start mark); none for cmd, WSL shells only through their own bash/zsh rc |
+| OS integration | None: no "New KS Forge Tab Here" Finder service, no folder dropped on the Dock icon, no dragging files into the terminal, one window only, no Secure Keyboard Entry | None: no Explorer "Open in KS Forge", no jump list, no command-line options (`-d <folder>`, `-p <profile>`), a second launch starts a second app, one window only |
+| Notifications | None (e.g. a long command finished while the window is in the back) | None |
+| Fonts | `ui-monospace` (SF Mono), Menlo; ligatures through our joiner | Cascadia Mono, Consolas |
+| Rendering | WebKit (WKWebView) + xterm.js WebGL | WebView2 (Chromium) + xterm.js WebGL; not measured on a real PC |
+| Start-up and speed | Measured: ~430 ms warm to first prompt, 1 M lines in ~3.2 s, app 8.5 MB, dmg 4.5 MB | Measured on CI only (9 s, shared VM, first start); installer 3.4 MB; WebView2 downloaded by the installer when missing |
+| Packaging | dmg, Apple silicon only, ad hoc signature, not notarised | NSIS per-user installer, x64 only, not Authenticode-signed; no ARM64 build |
+| Updates | ks-utility checker: opens the dmg | ks-utility checker: runs the installer and quits |
+| Version | One tag `vX.Y.Z` for both | Same |
+| Accessibility | Icon buttons labelled; xterm's screen reader mode **not on**; VoiceOver not tested; no "reduce motion" | Same labels; screen reader mode not on; Narrator and NVDA not tested; Windows high-contrast colours not followed |
+
+Other findings: the tab bar is the window's drag area on both, but double-clicking it does not zoom or maximize on Windows (no native caption there). On Windows, a long PowerShell first start (9 s on CI) shows an empty pane, with no "starting…" hint.
+
+## 2. The plan, per platform
+
+"New dependency" items are reported as [Dependencies](dependencies.md) requires and wait for decision 3.
+
+### 2.1 macOS (`desktop/mac/`)
+
+- **Look**: optional background blur behind the terminal (`NSVisualEffectView` through Tauri's `macOSPrivateApi` and a translucent theme background; decision 4). Proper title-bar double-click (zoom, as the system setting says).
+- **Menus like a Mac app**: Shell menu (New Tab, New Window ⌘N, Split, Close), View (font size, zoom pane, full screen), Window list of open windows, a Dock menu (New Tab, New Window, each profile).
+- **Multiple windows** (⌘N), each with its own tabs; the shared app state becomes one per window.
+- **Finder**: "New KS Forge Tab Here" and "New KS Forge Window Here" Services for folders; a folder dropped on the Dock icon opens a tab there; files dragged into a pane type their quoted paths.
+- **Secure Keyboard Entry** (Shell menu), so other apps cannot read typed passwords (`EnableSecureEventInput`, Carbon, no new dependency).
+- **Option key**: Left and right Option set separately as Meta (common for people who type accented characters with one of them).
+- **Notifications**: "Command finished" when a command that ran more than 10 s ends while the window is in the back, from the shell integration's marks (decision 3: `tauri-plugin-notification`).
+- **Performance**: measure cold start from Finder; keep the Apple-silicon-only build small; the WebGL glyph atlas is rebuilt only when the font changes.
+- **Packaging**: notarised dmg once the owner has a Developer ID (decision 6); Intel build only if asked (decision 5).
+- **Accessibility**: screen reader mode on when VoiceOver is running (or by setting), labelled controls, "Reduce motion" honoured, VoiceOver pass.
+
+### 2.2 Windows (`desktop/windows/`)
+
+- **Look**: the tabs move into the title bar with our own minimise, maximise and close buttons and Snap Layouts on hover (Windows 11), like other modern Windows terminals; Mica or Acrylic behind it (Tauri `windowEffects`); dark or light caption following the theme (decision 2).
+- **Input**: Ctrl+C copies when text is selected and sends Ctrl+C otherwise; Ctrl+V pastes (both settings, on by default as Windows users expect); Alt+Enter and F11 full screen; Ctrl+Shift+number opens a profile.
+- **Running-program check**: list the shell's child processes (`CreateToolhelp32Snapshot`, `windows-sys` is already in the dependency tree) so closing a tab with a running program asks first, as on macOS.
+- **Explorer and the shell**: "Open in KS Forge" on folders and folder backgrounds (per-user registry keys written and removed by the installer); command-line options `ks-forge.exe [-d <folder>] [-p <profile>]`; a second launch opens a tab in the running app instead of a second app (decision 3: `tauri-plugin-single-instance`); a taskbar jump list with the profiles (decision 3: `windows` crate COM, or left out).
+- **Profiles**: "Run as administrator" per profile (starts an elevated copy through `ShellExecute runas`, since one window cannot mix elevation); WSL default folder `~`; Visual Studio developer shells found when installed.
+- **Start-up**: a "Starting PowerShell…" hint in a pane until the first output; measure start-up and output speed on a real PC (owner, decision 7); pre-warm WebView2 is not needed if the numbers are good.
+- **Packaging**: x64 installer as now; ARM64 installer if wanted (decision 5); Authenticode signing once the owner has a certificate (decision 6); later a winget manifest.
+- **Accessibility**: screen reader mode when Narrator or NVDA runs (`SPI_GETSCREENREADER`), high-contrast mode follows the system colours (`forced-colors`), Narrator pass by the owner.
+
+### 2.3 Shared (`shared/`)
+
+- Per-window state (both platforms need it for multiple windows), session restore (reopen the last windows, tabs and folders; setting).
+- A "This device" settings section for what exists on one system only (Secure Keyboard Entry, blur, Ctrl+C/V, Explorer menu).
+- The command-finished signal from OSC 133 marks (start and end time per command), used by both notification items.
+- New interface text in `shared/src/locales/en.json` and `hi.json` with the Hindi style guide; the language-file check runs in the tests.
+- The self-test grows with each step (windows, the running-program check on Windows, command-line options), so CI keeps proving each platform.
+
+## 3. Decisions for the owner
+
+1. **Own version per platform.** Options:
+   - **(a)** One tag per platform, `mac-vX.Y.Z` and `windows-vX.Y.Z`, through ks-utility v0.10.0's helpers (`tag_prefix`, `parse_releases`, the release list instead of `releases/latest`). Because v0.1.0 copies read only `releases/latest`, a plain **bridge release `v0.1.1`** (both platforms, with the v0.10.0 updater) goes out first; after that each platform releases alone. The release workflow takes a `platform` input for rehearsals.
+   - (b) Keep one `vX.Y.Z` for both.
+2. **Windows title bar**: (a) tabs in the title bar with our own caption buttons and Mica (more work, about 40 px more terminal); (b) keep the native title bar, only make it follow the dark or light theme.
+3. **New dependencies** (each optional): `tauri-plugin-single-instance` (Windows second launch → new tab), `tauri-plugin-notification` (command finished, both), the `windows` crate for the jump list (Windows). Everything else uses what is already in the tree.
+4. **macOS background blur**: needs Tauri's `macOSPrivateApi`, which Apple does not allow in the Mac App Store; fine for the dmg. Yes or no.
+5. **More builds**: Intel Mac and Windows ARM64 (each one more CI job and release file), or Apple silicon and x64 only.
+6. **Signing**: an Apple Developer ID (99 USD a year) for notarised dmgs, and a Windows code-signing certificate. Until then both stay unsigned.
+7. **Windows hand check**: the owner tries the CI installer on a real Windows PC after the Windows step (start-up, speed, Narrator, title bar); it never blocks a release.
+
+## 4. Build order and testing
+
+Each step is one or more commits on `dev`, tested on its platform before the next. Releases follow the suite's release cycle.
+
+| Step | What | Where | Tested on |
+|---|---|---|---|
+| 1 | Versioning per platform (if 3.1 a): ks-utility pin v0.10.0, updater on the release list, bridge release `v0.1.1`, then platform tags and the `platform` rehearsal input | `shared/src-tauri/src/updates.rs`, `scripts/`, `.github/workflows/release.yml`, `specs/release.md` | Rust and script tests; a rehearsal per platform; v0.1.0 → v0.1.1 update on this Mac |
+| 2 | Platform folders for Rust (`desktop/<os>/src/`), per-window state, multiple windows, session restore, "This device" settings | `shared/`, `desktop/*/src/` | Unit tests; self-test on macOS and on CI for Windows |
+| 3 | macOS: menus and Dock menu, Finder services, drag and drop, Secure Keyboard Entry, Option keys, (blur), (notifications), VoiceOver | `desktop/mac/` | This Mac: self-test, the built dmg, VoiceOver |
+| 4 | Windows: title bar (decision 2), Ctrl+C/V, running-program check, Explorer menu and command line, (single instance), (jump list), administrator profiles, start-up hint, Narrator mode | `desktop/windows/` | CI: unit tests, installer install/self-test/uninstall (checks the registry keys and the busy check); owner's hand check |
+| 5 | Accessibility and Hindi pass on both | `shared/`, both folders | VoiceOver (Mac); Narrator by the owner |
+
+Windows cannot be run from this Mac, so step 4 is checked by CI (the self-test drives the installed app) and the owner's hand check.

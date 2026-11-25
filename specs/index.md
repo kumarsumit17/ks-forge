@@ -5,6 +5,7 @@ okf_version: "0.2"
 # Plans
 
 * [First version plan](plan.md) - The plan for the suite's modern terminal for macOS and Windows: name, stack with reasons, the first version's features, what waits for later, languages, updates, packaging and the release steps.
+* [Per-platform optimization plan](plan-per-platform.md) - Plan for making each KS Forge build (macOS, Windows) its own app with its own version, tuned to its OS for look, input, performance, packaging, OS integrations and accessibility.
 
 # Policies
 

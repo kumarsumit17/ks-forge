@@ -1,5 +1,6 @@
 # 2026-11-25
 
+* **Creation**: [Per-platform optimization plan](plan-per-platform.md) added (draft, waiting for the owner's approval and decisions): audit of the macOS and Windows builds, per-platform items, seven decisions, build order with tests.
 * **Update**: `ks-utility` moved from `v0.4.2` to `v0.9.0` (more languages, the translation tools; [ks-utility translation tools](https://github.com/kumarsumit17/ks-utility/blob/main/specs/translating.md)).
 
 # 2026-11-25
