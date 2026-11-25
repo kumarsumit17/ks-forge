@@ -222,7 +222,9 @@ fn selftest_enabled() -> bool {
 
 /// Opens a tab for `request` in the window in front, or a new window when asked or when
 /// there is none (Dock menu, Finder, a second launch on Windows).
-fn open_request(app: &AppHandle, request: wins::Request, new_window: bool) {
+fn open_request(app: &AppHandle, mut request: wins::Request, new_window: bool) {
+    // A file's path (Explorer, Finder) opens its folder; a path that is not there, home.
+    request.cwd = request.cwd.as_deref().and_then(|c| folder_of(std::path::Path::new(c)));
     if !new_window && let Some(w) = wins::front(app) {
         let _ = w.emit_to(w.label(), "open-request", &request);
         let _ = w.unminimize();
