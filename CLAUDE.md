@@ -38,7 +38,7 @@ The self-test drives the real app (a shell, splits, tabs, themes, settings) and 
 - The window's colours come from the active terminal theme (`--bg`, `--fg`, `--accent` in `shared/src/styles.css`).
 
 ## Shared code (`ks-utility`)
-- Pinned to one tag (`v0.10.1`), the same in `shared/package.json` (`git+https://github.com/kumasumit/ks-utility.git#<tag>`) and `shared/src-tauri/Cargo.toml` (`tag = "<tag>"`). Used for: translator and language check, app-update decisions (Rust), SHA-256, atomic writes, `formatBytes`.
+- Pinned to one tag (`v0.12.0`), the same in `shared/package.json` (`git+https://github.com/kumasumit/ks-utility.git#<tag>`) and `shared/src-tauri/Cargo.toml` (`tag = "<tag>"`). Used for: translator and language check, app-update decisions (Rust), SHA-256, atomic writes, `formatBytes`.
 - To move the pin: change both, `npm install`, `cargo check`, check both lock files name the tag's commit, commit both lock files in a commit of its own.
 
 ## Constraints
