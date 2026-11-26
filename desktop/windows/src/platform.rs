@@ -13,7 +13,7 @@ use tauri::utils::{WindowEffect, config::WindowEffectsConfig};
 use tauri::{WebviewWindowBuilder, Wry};
 use windows::Win32::Foundation::{CloseHandle, PROPERTYKEY};
 use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
-use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoUninitialize};
+use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemAlloc, CoUninitialize};
 use windows::Win32::System::Diagnostics::ToolHelp::{CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS};
 use windows::Win32::System::Variant::VT_LPWSTR;
 use windows::Win32::UI::Shell::Common::{IObjectArray, IObjectCollection};
@@ -121,11 +121,18 @@ unsafe fn shell_link(exe: &str, args: &str, title: &str) -> windows::core::Resul
         link.SetArguments(&HSTRING::from(args))?;
         link.SetIconLocation(&HSTRING::from(exe), 0)?;
         let store: IPropertyStore = link.cast()?;
-        // The title as a VT_LPWSTR PROPVARIANT; `wide` outlives the SetValue call, which copies it.
-        let mut wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+        // The title as a VT_LPWSTR PROPVARIANT. Its string must come from CoTaskMemAlloc:
+        // dropping a PROPVARIANT calls PropVariantClear, which frees it with CoTaskMemFree
+        // (a Rust-owned buffer here corrupted the heap).
+        let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+        let buf = CoTaskMemAlloc(wide.len() * std::mem::size_of::<u16>()) as *mut u16;
+        if buf.is_null() {
+            return Err(windows::core::Error::from(windows::Win32::Foundation::E_OUTOFMEMORY));
+        }
+        std::ptr::copy_nonoverlapping(wide.as_ptr(), buf, wide.len());
         let mut value = PROPVARIANT::default();
         (*value.Anonymous.Anonymous).vt = VT_LPWSTR;
-        (*value.Anonymous.Anonymous).Anonymous.pwszVal = PWSTR(wide.as_mut_ptr());
+        (*value.Anonymous.Anonymous).Anonymous.pwszVal = PWSTR(buf);
         store.SetValue(&PKEY_TITLE, &value)?;
         store.Commit()?;
         Ok(link)
