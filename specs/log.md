@@ -1,5 +1,6 @@
 # 2026-11-26
 
+* **Update**: [Releasing](release.md): "Build, test, release, no waiting" (owner's suite rule): tested work is released with the next tag without asking first; hand checks never block a release.
 * **Update**: ks-utility pin moved to v0.12.1 (पैनल is no longer an avoided word; it stays right for a panel, and a terminal pane is हिस्सा). No change to KS Forge's texts.
 * **Update**: ks-utility pin moved to v0.12.0 (approved Hindi terms; v0.11 added the google-tv and chrome platforms; no code KS Forge uses changed).
 * **Update**: Hindi: the owner approved KS Forge's terms (ks-utility v0.12.0) with Pane as हिस्सा instead of पैनल; 13 texts and the landing-page tagline changed; `docs/hindi-review.md` removed.

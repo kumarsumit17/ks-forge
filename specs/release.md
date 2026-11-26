@@ -49,6 +49,10 @@ The repository moved from `kumarsumit17/ks-forge` to `kumasumit/ks-forge`. GitHu
 - Not yet signed by Apple (ad hoc signature, no notarisation) or Microsoft (no Authenticode); the release notes say how to open the files the first time. Real signing needs an Apple Developer ID and a Windows code-signing certificate from the owner.
 - The four `ks-release` secrets are set on the repository (suite rule "signing first", 2026-11-24); this desktop-only app does not use them yet.
 
+## Build, test, release, no waiting
+
+The owner's rule for every KS-Suite app ([release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md)): every feature or fix is built, tested (unit tests, the self-test on macOS and on CI's installed Windows copy), pushed to `dev` and released with the next tag, with no approval asked before a tag. Nothing is committed or released while a test fails. A feature raises MINOR, a fix raises PATCH. The owner's hand checks on a real Mac or Windows PC come after the release and never block one; what they find goes into the next version.
+
 ## Steps
 
 GitHub starts a workflow by hand only when its file is on the default branch, so for the very first release `main` was fast-forwarded to a green `dev` before the rehearsal (2026-11-24); from then on the order below holds.
