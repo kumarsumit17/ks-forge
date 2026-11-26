@@ -7,11 +7,11 @@ tags: [release, ci, macos, windows]
 
 # Releasing
 
-The suite's [release cycle](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/release-cycle.md) applies; `.github/workflows/release.yml` follows its shape (rehearsal by manual run, read-only build jobs, one publish job, attestations, pinned actions). The shared `kotlin-app-release.yml` in ks-utility is for Gradle apps only; a shared Tauri workflow there is a later step.
+The suite's [release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md) applies; `.github/workflows/release.yml` follows its shape (rehearsal by manual run, read-only build jobs, one publish job, attestations, pinned actions). The shared `kotlin-app-release.yml` in ks-utility is for Gradle apps only; a shared Tauri workflow there is a later step.
 
 ## Tags
 
-Each system has its own version (KS-Suite [Platform tags](https://github.com/kumarsumit17/KS-Suite/blob/main/specs/versioning-signing.md)):
+Each system has its own version (KS-Suite [Platform tags](https://github.com/kumasumit/KS-Suite/blob/main/specs/versioning-signing.md)):
 
 | Tag | Builds | Marked latest | CHANGELOG heading |
 |---|---|---|---|
@@ -28,7 +28,7 @@ A new tag must be higher than its system's own tags and every plain tag (a plain
 | macOS (Apple silicon) | `ks-forge-v<version>-macos-arm64.dmg` (plain and `mac-v` tags) | `macos-15` |
 | Windows (x64) | `ks-forge-v<version>-windows-x64-setup.exe` (NSIS, per user, no admin; plain and `windows-v` tags) | `windows-2025` |
 
-These names match ks-utility's [app-update](https://github.com/kumarsumit17/ks-utility/blob/main/specs/app-update.md) rules, so the app finds its own update.
+These names match ks-utility's [app-update](https://github.com/kumasumit/ks-utility/blob/main/specs/app-update.md) rules, so the app finds its own update.
 
 ## Checks before publishing
 - The tag is `vX.Y.Z`, `mac-vX.Y.Z` or `windows-vX.Y.Z` on `main`, higher than the tags before it; `CHANGELOG.md` has its dated section.

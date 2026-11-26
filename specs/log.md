@@ -1,3 +1,7 @@
+# 2026-11-26
+
+* **Update**: ks-utility and KS-Suite moved to the GitHub account `kumasumit` (owner confirmed): the ks-utility git dependencies (npm, Cargo, both lock files; same v0.10.1 commit `c1a7afb`) and the links to both. KS Forge itself stays under `kumarsumit17` until it moves.
+
 # 2026-11-25
 
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) and [Releasing](release.md): platform tags again (suite rule changed by the owner): `mac-vX.Y.Z` and `windows-vX.Y.Z` release one system and are not latest; plain `vX.Y.Z` releases both; `v0.2.0` is the bridge release; the updater reads the release list; step 1 built.
@@ -7,7 +11,7 @@
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) step 2 built: several windows, session restore, command-line folder and profile, platform-only Rust in the platform folders. [Settings file](settings-file.md): `restoreSession`.
 * **Update**: [Per-platform optimization plan](plan-per-platform.md) approved: one version for both, tabs in the Windows title bar, single instance + notifications + jump list, macOS background blur; Apple silicon and x64 only, unsigned for now.
 * **Creation**: [Per-platform optimization plan](plan-per-platform.md) added (draft, waiting for the owner's approval and decisions): audit of the macOS and Windows builds, per-platform items, seven decisions, build order with tests.
-* **Update**: `ks-utility` moved from `v0.4.2` to `v0.9.0` (more languages, the translation tools; [ks-utility translation tools](https://github.com/kumarsumit17/ks-utility/blob/main/specs/translating.md)).
+* **Update**: `ks-utility` moved from `v0.4.2` to `v0.9.0` (more languages, the translation tools; [ks-utility translation tools](https://github.com/kumasumit/ks-utility/blob/main/specs/translating.md)).
 
 # 2026-11-25
 
