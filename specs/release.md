@@ -7,11 +7,11 @@ tags: [release, ci, macos, windows]
 
 # Releasing
 
-The suite's [release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md) applies. `.github/workflows/release.yml` calls ks-utility's shared Tauri workflows ([Tauri apps](https://github.com/kumasumit/ks-utility/blob/main/specs/release-workflow.md)): `tauri-app-release-check.yml` (tag format, higher than earlier tags, on `main`, dated CHANGELOG section) before our own macOS and Windows build jobs, and `tauri-app-release-publish.yml` (attest, check, publish) after them. Since v0.2.1 attestations are signed by that publish workflow: `gh attestation verify <file> -R kumasumit/ks-forge --signer-workflow kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml`.
+The suite's [release cycle](https://github.com/kumasumit/ks-suite/blob/main/specs/release-cycle.md) applies. `.github/workflows/release.yml` calls ks-utility's shared Tauri workflows ([Tauri apps](https://github.com/kumasumit/ks-utility/blob/main/specs/release-workflow.md)): `tauri-app-release-check.yml` (tag format, higher than earlier tags, on `main`, dated CHANGELOG section) before our own macOS and Windows build jobs, and `tauri-app-release-publish.yml` (attest, check, publish) after them. Since v0.2.1 attestations are signed by that publish workflow: `gh attestation verify <file> -R kumasumit/ks-forge --signer-workflow kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml`.
 
 ## Tags
 
-Each system has its own version (KS-Suite [Platform tags](https://github.com/kumasumit/KS-Suite/blob/main/specs/versioning-signing.md)):
+Each system has its own version (KS-Suite [Platform tags](https://github.com/kumasumit/ks-suite/blob/main/specs/versioning-signing.md)):
 
 | Tag | Builds | Marked latest | CHANGELOG heading |
 |---|---|---|---|
@@ -51,11 +51,11 @@ The repository moved from `kumarsumit17/ks-forge` to `kumasumit/ks-forge`. GitHu
 
 ## Build, test, release, no waiting
 
-The owner's rule for every KS-Suite app ([release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md)): every feature or fix is built, tested (unit tests, the self-test on macOS and on CI's installed Windows copy), pushed to `dev` and released with the next tag, with no approval asked before a tag. Nothing is committed or released while a test fails. A feature raises MINOR, a fix raises PATCH. The owner's hand checks on a real Mac or Windows PC come after the release and never block one; what they find goes into the next version.
+The owner's rule for every KS-Suite app ([release cycle](https://github.com/kumasumit/ks-suite/blob/main/specs/release-cycle.md)): every feature or fix is built, tested (unit tests, the self-test on macOS and on CI's installed Windows copy), pushed to `dev` and released with the next tag, with no approval asked before a tag. Nothing is committed or released while a test fails. A feature raises MINOR, a fix raises PATCH. The owner's hand checks on a real Mac or Windows PC come after the release and never block one; what they find goes into the next version.
 
 ## Steps
 
-0. Move the ks-utility pin to its newest tag first, in a commit of its own, tested as usual (suite rule, [release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md) step 1).
+0. Move the ks-utility pin to its newest tag first, in a commit of its own, tested as usual (suite rule, [release cycle](https://github.com/kumasumit/ks-suite/blob/main/specs/release-cycle.md) step 1).
 
 GitHub starts a workflow by hand only when its file is on the default branch, so for the very first release `main` was fast-forwarded to a green `dev` before the rehearsal (2026-11-24); from then on the order below holds.
 

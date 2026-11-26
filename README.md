@@ -1,6 +1,6 @@
 # KS Forge
 
-A fast, private terminal for macOS and Windows, part of [KS-Suite](https://github.com/kumasumit/KS-Suite). Free: no ads, no analytics, no account.
+A fast, private terminal for macOS and Windows, part of [KS-Suite](https://github.com/kumasumit/ks-suite). Free: no ads, no analytics, no account.
 
 - **Tabs and split panes**: split right or down to any depth, drag dividers, move between panes with the keyboard, zoom a pane, rename tabs and give them an icon and colour.
 - **Profiles**: zsh, bash and fish on macOS; PowerShell, Windows PowerShell, Command Prompt, Git Bash and WSL on Windows are found by themselves. Each profile has its own folder, variables, theme and icon.

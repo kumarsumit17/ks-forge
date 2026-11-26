@@ -7,7 +7,7 @@ tags: [dependencies, cargo, npm, policy]
 
 # Dependencies
 
-The suite rule ([Dependencies](https://github.com/kumasumit/KS-Suite/blob/main/specs/dependencies.md)) applies: add a dependency only when writing it ourselves would be unreasonable or unsafe; standard library and our own code first; security-critical code (TLS) from a maintained library; no analytics, crash-reporting or ad SDKs. Every dependency is listed with its licence in `docs/THIRD_PARTY.md` and recorded in [log](log.md) when added.
+The suite rule ([Dependencies](https://github.com/kumasumit/ks-suite/blob/main/specs/dependencies.md)) applies: add a dependency only when writing it ourselves would be unreasonable or unsafe; standard library and our own code first; security-critical code (TLS) from a maintained library; no analytics, crash-reporting or ad SDKs. Every dependency is listed with its licence in `docs/THIRD_PARTY.md` and recorded in [log](log.md) when added.
 
 ## Why each one
 

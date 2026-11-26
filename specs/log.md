@@ -1,3 +1,7 @@
+# 2026-11-27
+
+* **Update**: links to the suite repository now use its new name, `kumasumit/ks-suite`.
+
 # 2026-11-26
 
 * **Update**: ks-utility pin moved to v0.14.0; [Releasing](release.md): the release workflow calls ks-utility's shared Tauri check and publish workflows (attestations signed by ks-utility's publish workflow).
