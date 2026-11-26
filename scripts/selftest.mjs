@@ -43,6 +43,7 @@ child.on("close", (code, signal) => {
     process.exit(0);
   }
   console.error(line ?? `no self-test result (exit code ${code}, signal ${signal}, after ${Date.now() - started} ms)`);
-  console.error(out.split(/\r?\n/).slice(-30).join("\n"));
+  // The app's progress lines (and any output) show how far it got.
+  console.error(out.split(/\r?\n/).filter(Boolean).slice(-30).join("\n"));
   process.exit(1);
 });

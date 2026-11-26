@@ -13,6 +13,8 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
+void import("@tauri-apps/api/core").then(({ invoke }) => invoke("selftest_progress", { step: "page loaded" }).catch(() => {}));
+
 app
   .start()
   .then(runSelfTest)

@@ -139,8 +139,10 @@ fn window_request(window: tauri::WebviewWindow, app: State<App>) -> wins::Reques
     app.windows.take(window.label())
 }
 
+/// Async on purpose: a synchronous command runs on the main thread, and creating a window
+/// there deadlocks on Windows (Tauri's documented limit).
 #[tauri::command]
-fn window_new(handle: AppHandle, app: State<App>, cwd: Option<String>, profile: Option<String>) -> Result<String, Msg> {
+async fn window_new(handle: AppHandle, app: State<'_, App>, cwd: Option<String>, profile: Option<String>) -> Result<String, Msg> {
     app.windows.open(&handle, wins::Request { cwd, profile, layout: None }).map_err(|e| msg!("error.window", detail = e))
 }
 
@@ -304,6 +306,20 @@ fn screen_reader_active() -> bool {
 #[tauri::command]
 fn selftest_platform() -> String {
     platform::self_check()
+}
+
+/// The self-test's progress, appended to its result file, so a hang shows how far it got.
+#[tauri::command]
+fn selftest_progress(step: String) {
+    if !selftest_enabled() {
+        return;
+    }
+    if let Some(path) = std::env::var_os("KS_FORGE_SELFTEST_OUT") {
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = writeln!(f, "progress: {step}");
+        }
+    }
 }
 
 /// Milliseconds since the process started, for the self-test's start-up measurement.
@@ -479,6 +495,7 @@ pub fn run() {
             run_elevated,
             selftest_enabled,
             selftest_report,
+            selftest_progress,
             app_uptime_ms,
         ])
         .build(tauri::generate_context!())

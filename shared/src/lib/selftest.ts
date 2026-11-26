@@ -33,7 +33,11 @@ export async function runSelfTest(): Promise<void> {
   if (!(await invoke<boolean>("selftest_enabled"))) return;
   const steps: string[] = [];
   let watched = "";
-  const step = (s: string) => steps.push(s);
+  const step = (s: string) => {
+    steps.push(s);
+    void invoke("selftest_progress", { step: s }).catch(() => {});
+  };
+  void invoke("selftest_progress", { step: "interface started" }).catch(() => {});
   try {
     const info = await api.appInfo();
     step(`platform=${info.platform} profiles=${app.state.settings.profiles.map((p) => p.id).join(",")}`);
