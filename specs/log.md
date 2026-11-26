@@ -1,5 +1,6 @@
 # 2026-11-26
 
+* **Update**: `v0.2.0` released (bridge release, both systems); [Per-platform optimization plan](plan-per-platform.md) marked.
 * **Update**: ks-utility pin moved to v0.13.2 (approved Hindi terms only, no code change); [Releasing](release.md): the pin moves to ks-utility's newest tag before each release.
 * **Update**: [Releasing](release.md): "Build, test, release, no waiting" (owner's suite rule): tested work is released with the next tag without asking first; hand checks never block a release.
 * **Update**: ks-utility pin moved to v0.12.1 (पैनल is no longer an avoided word; it stays right for a panel, and a terminal pane is हिस्सा). No change to KS Forge's texts.
