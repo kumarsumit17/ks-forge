@@ -1,5 +1,6 @@
 # 2026-11-26
 
+* **Update**: ks-utility pin moved to v0.12.1 (पैनल is no longer an avoided word; it stays right for a panel, and a terminal pane is हिस्सा). No change to KS Forge's texts.
 * **Update**: ks-utility pin moved to v0.12.0 (approved Hindi terms; v0.11 added the google-tv and chrome platforms; no code KS Forge uses changed).
 * **Update**: Hindi: the owner approved KS Forge's terms (ks-utility v0.12.0) with Pane as हिस्सा instead of पैनल; 13 texts and the landing-page tagline changed; `docs/hindi-review.md` removed.
 * **Update**: the repository moved to `kumasumit/ks-forge` (owner's account move): git remote, links, the updater's repository and the release notes' attestation command. v0.1.0 copies only trust files from the old address, so they get v0.2.0 by hand once ([Releasing](release.md)).
