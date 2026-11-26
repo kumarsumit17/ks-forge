@@ -2,6 +2,11 @@
 
 All notable changes to KS Forge. Versions follow [SemVer](https://semver.org/); the version comes from the git tag.
 
+## [0.2.1] - 2026-11-26
+
+- Built with ks-utility v0.14.0 and its shared Tauri release workflow (tag check, attestations and publishing). No change in the app itself.
+- Attestations are now signed by ks-utility's publish workflow: `gh attestation verify <file> -R kumasumit/ks-forge --signer-workflow kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml`.
+
 ## [0.2.0] - 2026-11-26
 
 Each system's own build. This is also the bridge release: from here on macOS and Windows can release separately (`mac-v…`, `windows-v…`), and the app finds its own system's newest version.

@@ -7,7 +7,7 @@ tags: [release, ci, macos, windows]
 
 # Releasing
 
-The suite's [release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md) applies; `.github/workflows/release.yml` follows its shape (rehearsal by manual run, read-only build jobs, one publish job, attestations, pinned actions). The shared `kotlin-app-release.yml` in ks-utility is for Gradle apps only; a shared Tauri workflow there is a later step.
+The suite's [release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md) applies. `.github/workflows/release.yml` calls ks-utility's shared Tauri workflows ([Tauri apps](https://github.com/kumasumit/ks-utility/blob/main/specs/release-workflow.md)): `tauri-app-release-check.yml` (tag format, higher than earlier tags, on `main`, dated CHANGELOG section) before our own macOS and Windows build jobs, and `tauri-app-release-publish.yml` (attest, check, publish) after them. Since v0.2.1 attestations are signed by that publish workflow: `gh attestation verify <file> -R kumasumit/ks-forge --signer-workflow kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml`.
 
 ## Tags
 

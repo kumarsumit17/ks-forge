@@ -37,7 +37,7 @@ export function notes(changelog, tag) {
 
 ${lines.join("\n")}
 
-Every file has a build provenance attestation: \`gh attestation verify <file> -R kumasumit/ks-forge\`.
+Every file has a build provenance attestation: \`gh attestation verify <file> -R kumasumit/ks-forge --signer-workflow kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml\`.
 `;
 }
 
