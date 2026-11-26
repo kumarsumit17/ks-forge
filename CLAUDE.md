@@ -33,7 +33,7 @@ The self-test drives the real app (a shell, splits, tabs, themes, settings) and 
 - Link between specs with relative markdown links.
 
 ## UI
-- Interface text is English and Hindi: every string is a key in `shared/src/locales/{en,hi}.json` or ks-utility's `common.*` catalogue, used with `t()` from `shared/src/lib/i18n.ts`; Rust sends message codes (`msg!`), never sentences. Hindi follows ks-utility's `specs/hindi-style.md`; new terms are listed in `docs/hindi-review.md` for the owner.
+- Interface text is English and Hindi: every string is a key in `shared/src/locales/{en,hi}.json` or ks-utility's `common.*` catalogue, used with `t()` from `shared/src/lib/i18n.ts`; Rust sends message codes (`msg!`), never sentences. Hindi follows ks-utility's `specs/hindi-style.md` and its term list (KS Forge's terms approved by the owner in ks-utility v0.12.0: Pane is हिस्सा, Split is बांटें); a new term goes to ks-utility's owner session for review.
 - The design, themes and icon are our own. Never copy code, icons, themes, layouts or assets from other terminals (Wave, Warp, iTerm2, Windows Terminal, …).
 - The window's colours come from the active terminal theme (`--bg`, `--fg`, `--accent` in `shared/src/styles.css`).
 

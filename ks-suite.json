@@ -7,6 +7,6 @@
   "stack": "Rust · Tauri · TypeScript",
   "tagline": {
     "en": "Fast, private terminal for macOS and Windows, with tabs, split panes, themes and profiles.",
-    "hi": "macOS और Windows के लिए तेज़ और प्राइवेट टर्मिनल, टैब, स्प्लिट पैनल, थीम और प्रोफ़ाइल के साथ।"
+    "hi": "macOS और Windows के लिए तेज़ और प्राइवेट टर्मिनल, टैब, बंटी हुई स्क्रीन, थीम और प्रोफ़ाइल के साथ।"
   }
 }
