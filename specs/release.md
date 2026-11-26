@@ -55,6 +55,8 @@ The owner's rule for every KS-Suite app ([release cycle](https://github.com/kuma
 
 ## Steps
 
+0. Move the ks-utility pin to its newest tag first, in a commit of its own, tested as usual (suite rule, [release cycle](https://github.com/kumasumit/KS-Suite/blob/main/specs/release-cycle.md) step 1).
+
 GitHub starts a workflow by hand only when its file is on the default branch, so for the very first release `main` was fast-forwarded to a green `dev` before the rehearsal (2026-11-24); from then on the order below holds.
 
 1. On `dev`: CI green; date the version's CHANGELOG section; run **Release** by hand with the version (rehearsal) and check it is green.
