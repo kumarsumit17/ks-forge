@@ -37,6 +37,10 @@ These names match ks-utility's [app-update](https://github.com/kumasumit/ks-util
 - Windows: the installer installs silently, the **self-test** passes on the installed copy, and it uninstalls cleanly.
 - Exactly the tag's files (two for a plain tag, one for a platform tag), unchanged between jobs (SHA-256), each with a build provenance attestation.
 
+## The 2026-11-26 account move
+
+The repository moved from `kumarsumit17/ks-forge` to `kumasumit/ks-forge`. GitHub forwards the old API address, but a v0.1.0 copy accepts only files under `https://github.com/kumarsumit17/ks-forge/releases/download/`, so it reports no installer for v0.2.0: v0.1.0 users install v0.2.0 by hand once (the release notes say so). From v0.2.0 on, the app reads the new address.
+
 ## Landing page card
 
 `ks-suite.json` in the repository root is this app's card on the KS-Suite landing page, read from `main` (the released app). It reaches `main` with each release; change it on `dev` when the platforms or description change.

@@ -14,7 +14,7 @@ A fast, private terminal for macOS and Windows, part of [KS-Suite](https://githu
 
 ## Download
 
-From the [latest release](https://github.com/kumarsumit17/ks-forge/releases/latest): `…-macos-arm64.dmg` for Macs with Apple silicon, `…-windows-x64-setup.exe` for Windows. Neither is signed by Apple or Microsoft yet; the release notes say how to open them the first time.
+From the [latest release](https://github.com/kumasumit/ks-forge/releases/latest): `…-macos-arm64.dmg` for Macs with Apple silicon, `…-windows-x64-setup.exe` for Windows. Neither is signed by Apple or Microsoft yet; the release notes say how to open them the first time.
 
 ## Build
 

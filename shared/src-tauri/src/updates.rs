@@ -26,7 +26,7 @@ use tokio::io::AsyncWriteExt;
 use crate::msg;
 use crate::msg::Msg;
 
-pub const REPO: &str = "kumarsumit17/ks-forge";
+pub const REPO: &str = "kumasumit/ks-forge";
 const STATE_FILE: &str = "app-update.json";
 const TIMEOUT: Duration = Duration::from_secs(30);
 

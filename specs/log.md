@@ -1,5 +1,6 @@
 # 2026-11-26
 
+* **Update**: the repository moved to `kumasumit/ks-forge` (owner's account move): git remote, links, the updater's repository and the release notes' attestation command. v0.1.0 copies only trust files from the old address, so they get v0.2.0 by hand once ([Releasing](release.md)).
 * **Update**: ks-utility and KS-Suite moved to the GitHub account `kumasumit` (owner confirmed): the ks-utility git dependencies (npm, Cargo, both lock files; same v0.10.1 commit `c1a7afb`) and the links to both. KS Forge itself stays under `kumarsumit17` until it moves.
 
 # 2026-11-25
