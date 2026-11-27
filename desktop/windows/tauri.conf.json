@@ -7,7 +7,8 @@
         "languages": [
           "English"
         ],
-        "installerHooks": "../../desktop/windows/hooks.nsh"
+        "installerHooks": "../../desktop/windows/hooks.nsh",
+        "installerIcon": "icons/icon.ico"
       }
     }
   }

@@ -2,6 +2,10 @@
 
 All notable changes to KS Forge. Versions follow [SemVer](https://semver.org/); the version comes from the git tag.
 
+## [0.2.2] - 2026-11-27
+
+- The Windows installer and uninstaller name KS Forge's own icon explicitly, so no build can fall back to a framework icon (KS-Suite "App icons" rule). A test checks every icon file and its sizes.
+
 ## [0.2.1] - 2026-11-26
 
 - Built with ks-utility v0.14.0 and its shared Tauri release workflow (tag check, attestations and publishing). No change in the app itself.

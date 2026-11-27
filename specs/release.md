@@ -45,6 +45,10 @@ The repository moved from `kumarsumit17/ks-forge` to `kumasumit/ks-forge`. GitHu
 
 `ks-suite.json` in the repository root is this app's card on the KS-Suite landing page, read from `main` (the released app). It reaches `main` with each release; change it on `dev` when the platforms or description change.
 
+## Icons
+
+Every icon is KS Forge's own, drawn by `scripts/make-icon.py` and turned into all sizes with `npm run tauri icon` (KS-Suite [App icons](https://github.com/kumasumit/ks-suite/blob/main/specs/conventions.md)): `.icns` for the app, Dock and dmg; `.ico` with 16 to 256 px for the exe, window, taskbar, jump list and, named explicitly, the NSIS installer and uninstaller; PNGs for the window. `scripts/test/icons.test.mjs` checks the files and sizes.
+
 ## Signing
 - Not yet signed by Apple (ad hoc signature, no notarisation) or Microsoft (no Authenticode); the release notes say how to open the files the first time. Real signing needs an Apple Developer ID and a Windows code-signing certificate from the owner.
 - The four `ks-release` secrets are set on the repository (suite rule "signing first", 2026-11-24); this desktop-only app does not use them yet.
