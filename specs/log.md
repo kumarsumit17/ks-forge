@@ -1,5 +1,6 @@
 # 2026-11-27
 
+* **Update**: `v0.2.3` released on ks-utility v0.18.4 (updates through ks-utility's installer, ks-suite-check, workflows at `@main`, the bump workflow on `main`).
 * **Update**: ks-utility pin moved to v0.18.4 (today's last tag, the owner's "fresh release on latest ks-utility").
 * **Update**: ks-utility pin moved to v0.18.3 (bump workflow and Kotlin build fixes; nothing KS Forge uses changed).
 * **Update**: ks-utility pin moved to v0.18.1 (a fix to its bump workflow).
