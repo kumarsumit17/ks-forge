@@ -2217,7 +2217,7 @@ dependencies = [
 [[package]]
 name = "ks-utility"
 version = "0.0.0"
-source = "git+https://github.com/kumasumit/ks-utility?tag=v0.18.1#2a8a7c2a5aa612608df533394b7a0b69a1823b2e"
+source = "git+https://github.com/kumasumit/ks-utility?tag=v0.18.3#f456312f05975f5f54e427d7ea1200cb89a502cc"
 
 [[package]]
 name = "lazy_static"
