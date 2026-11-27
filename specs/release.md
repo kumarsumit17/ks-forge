@@ -59,7 +59,7 @@ The owner's rule for every KS-Suite app ([release cycle](https://github.com/kuma
 
 ## Steps
 
-0. Move the ks-utility pin to its newest tag first, in a commit of its own, tested as usual (suite rule, [release cycle](https://github.com/kumasumit/ks-suite/blob/main/specs/release-cycle.md) step 1).
+0. The ks-utility pin is on its newest tag: `.github/workflows/ks-utility-bump.yml` moves it the day a tag is out (tested, its own commit on `dev`); the release check refuses an older pin and runs `ks-suite-check` before anything is built.
 
 GitHub starts a workflow by hand only when its file is on the default branch, so for the very first release `main` was fast-forwarded to a green `dev` before the rehearsal (2026-11-24); from then on the order below holds.
 

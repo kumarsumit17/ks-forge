@@ -2,6 +2,11 @@
 
 All notable changes to KS Forge. Versions follow [SemVer](https://semver.org/); the version comes from the git tag.
 
+## [0.2.3] - 2026-11-27
+
+- Updates open through ks-utility's installer: the download is marked as coming from the internet and opened; on macOS KS Forge says it now closes and quits after a few seconds (Finder cannot replace a running app), on Windows it quits as the installer starts. Your windows and tabs are saved first.
+- Built with ks-utility v0.15.0; every release now runs ks-suite-check, and KS Forge moves to each new ks-utility by itself.
+
 ## [0.2.2] - 2026-11-27
 
 - The Windows installer and uninstaller name KS Forge's own icon explicitly, so no build can fall back to a framework icon (KS-Suite "App icons" rule). A test checks every icon file and its sizes.

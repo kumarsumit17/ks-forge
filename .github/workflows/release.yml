@@ -6,7 +6,8 @@
 #                              and checks everything, attests and publishes nothing.
 #
 # The tag check and the attest-and-publish step are ks-utility's shared Tauri workflows
-# (ks-utility specs/release-workflow.md, "Tauri apps"); the macOS and Windows builds are ours.
+# (ks-utility specs/release-workflow.md, "Tauri apps"); the check also runs ks-suite-check, the
+# suite rules code can check. The macOS and Windows builds are ours.
 # Runner images are named versions; actions are GitHub's own, pinned to a full commit SHA.
 name: Release
 
@@ -38,7 +39,7 @@ jobs:
   version:
     permissions:
       contents: read
-    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-check.yml@v0.14.0
+    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-check.yml@v0.15.0
     with:
       version: ${{ inputs.version }}
       platform: ${{ inputs.platform }}
@@ -153,7 +154,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml@v0.14.0
+    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml@v0.15.0
     with:
       tag: ${{ needs.version.outputs.tag }}
       version: ${{ needs.version.outputs.version }}
