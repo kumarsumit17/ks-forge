@@ -2,6 +2,10 @@
 
 All notable changes to KS Forge. Versions follow [SemVer](https://semver.org/); the version comes from the git tag.
 
+## [0.2.4] - 2026-11-27
+
+DEV build (not released): release notes record the ks-utility version and how each system is signed, and the release attaches SHA256SUMS (ks-utility's publish workflow).
+
 ## [0.2.3] - 2026-11-27
 
 - Updates open through ks-utility's installer: the download is marked as coming from the internet and opened; on macOS KS Forge says it now closes and quits after a few seconds (Finder cannot replace a running app), on Windows it quits as the installer starts. Your windows and tabs are saved first.

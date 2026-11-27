@@ -39,7 +39,7 @@ jobs:
   version:
     permissions:
       contents: read
-    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-check.yml@main
+    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-check.yml@dev
     with:
       version: ${{ inputs.version }}
       platform: ${{ inputs.platform }}
@@ -154,7 +154,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml@main
+    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml@dev
     with:
       tag: ${{ needs.version.outputs.tag }}
       version: ${{ needs.version.outputs.version }}
@@ -164,4 +164,8 @@ jobs:
         ${{ needs.version.outputs.platform != 'windows' && format('ks-forge-v{0}-macos-arm64.dmg', needs.version.outputs.version) || '' }}
         ${{ needs.version.outputs.platform != 'mac' && format('ks-forge-v{0}-windows-x64-setup.exe', needs.version.outputs.version) || '' }}
       title: KS Forge ${{ needs.version.outputs.heading }}
+      ks-utility: ${{ needs.version.outputs.ks-utility }}
+      signing: |-
+        macOS: ad hoc signature, not notarised (no Apple Developer ID yet).
+        Windows: not Authenticode-signed yet.
       notes: node scripts/release-notes.mjs "$KS_TAG" > notes.md
