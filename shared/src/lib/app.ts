@@ -4,7 +4,7 @@
 // state, keyed by pane id.
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { createUpdateStore, type CheckResult, type Opened, type UpdateStore } from "ks-utility";
+import { createUpdateStore, MAC_QUIT_AFTER_MS, type CheckResult, type Opened, type UpdateStore } from "ks-utility";
 import { api, onMenu, onOpenRequest, onPtyExit, onSettingsFile, onSettingsSynced, type AppInfo } from "./tauri.ts";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
@@ -523,8 +523,8 @@ export class App {
 
   /**
    * The update's installer is open (ks-utility `install::open`): the app quits so the copy can be
-   * replaced. Windows: at once. macOS: after saying so for MAC_QUIT_AFTER (6 s), since Finder
-   * cannot replace a running app. The session is saved first; running programs are not asked
+   * replaced. Windows: at once. macOS ("macos-closes"): after MAC_QUIT_AFTER_MS, while the update
+   * store shows that it now closes, since Finder cannot replace a running app. The session is saved first; running programs are not asked
    * about, since the update cannot wait for them.
    */
   afterUpdateOpened(opened: string): void {
@@ -532,12 +532,8 @@ export class App {
       await this.saveSessionNow();
       await api.quitApp();
     };
-    if (opened === "macos") {
-      this.showToast(t("common.appUpdate.openedMacCloses", { app: "KS Forge" }));
-      setTimeout(() => void quit(), 6000);
-    } else {
-      setTimeout(() => void quit(), 1000);
-    }
+    // The update store already shows openedMacCloses for "macos-closes".
+    setTimeout(() => void quit(), opened === "macos-closes" ? MAC_QUIT_AFTER_MS : 1000);
   }
 
   /** Quits the app: every window, asking first when a program is running in any of them. */

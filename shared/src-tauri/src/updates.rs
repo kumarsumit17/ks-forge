@@ -111,7 +111,7 @@ impl Updater {
     }
 
     /// Downloads the installer found by the last check, checks it, and opens it. Returns
-    /// "macos" or "windows" (ks-utility `Opened`); on Windows the app then quits.
+    /// "macos-closes" or "windows" (ks-utility `Opened`); the app then quits.
     pub async fn install(&self) -> Result<&'static str, Msg> {
         let found = self.found.lock().ok().and_then(|f| f.clone()).ok_or_else(|| msg!("common.appUpdate.none"))?;
         if self.busy.swap(true, Ordering::SeqCst) {
@@ -143,7 +143,9 @@ impl Updater {
         let opened = app_update::install::open(&file, "KS Forge").map_err(|e| msg!("common.appUpdate.openFailed", detail = e))?;
         Ok(match opened {
             app_update::install::Opened::Windows => "windows",
-            app_update::install::Opened::Mac => "macos",
+            // ks-utility's update store (v0.17.0): shows openedMacCloses; the app quits after
+            // MAC_QUIT_AFTER_MS.
+            app_update::install::Opened::Mac => "macos-closes",
         })
     }
 }
