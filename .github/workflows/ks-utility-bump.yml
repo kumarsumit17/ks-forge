@@ -26,8 +26,3 @@ jobs:
       runs-on: macos-15
       node-version: "26"
       test: cd shared && npm ci && npm test && npm run test:lang && cd src-tauri && cargo test --quiet
-    # Lets the move also rewrite these @vX calls of ks-utility's workflows (GitHub's own token
-    # may not change workflow files). Without it, ks-suite-check stops the release until they
-    # are moved by hand.
-    secrets:
-      KS_WORKFLOWS_TOKEN: ${{ secrets.KS_WORKFLOWS_TOKEN }}

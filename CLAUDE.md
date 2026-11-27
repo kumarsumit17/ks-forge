@@ -39,7 +39,7 @@ The self-test drives the real app (a shell, splits, tabs, themes, settings) and 
 
 ## Shared code (`ks-utility`)
 - Pinned to one tag (`v0.17.0`), the same in `shared/package.json` (`git+https://github.com/kumasumit/ks-utility.git#<tag>`) and `shared/src-tauri/Cargo.toml` (`tag = "<tag>"`). Used for: translator and language check, app-update decisions (Rust), SHA-256, atomic writes, `formatBytes`.
-- The pin follows ks-utility's newest tag by itself: `.github/workflows/ks-utility-bump.yml` moves it (and, with the secret `KS_WORKFLOWS_TOKEN`, the `@vX` calls of ks-utility's workflows), tests and commits `chore: move ks-utility to vX.Y.Z` to `dev` the day a tag is out (by hand: change both, `npm install`, `cargo check`, check both lock files name the tag's commit, commit them on their own). The release refuses a pin or a workflow call that is not the newest tag, and runs `ks-suite-check` (`node shared/node_modules/ks-utility/typescript/tools/suite-check.mjs .` by hand).
+- The pin follows ks-utility's newest tag by itself: `.github/workflows/ks-utility-bump.yml` moves it, tests and commits `chore: move ks-utility to vX.Y.Z` to `dev` the day a tag is out (by hand: change both, `npm install`, `cargo check`, check both lock files name the tag's commit, commit them on their own). The release refuses a pin or a workflow call that is not the newest tag, and runs `ks-suite-check` (`node shared/node_modules/ks-utility/typescript/tools/suite-check.mjs .` by hand).
 
 ## Constraints
 - Free: no ads, no analytics, no crash reporting.
