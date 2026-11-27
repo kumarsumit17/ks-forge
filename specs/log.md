@@ -1,5 +1,6 @@
 # 2026-11-27
 
+* **Update**: ks-utility v0.16.0: pin and the `@vX` calls of its shared workflows moved; the bump workflow passes `KS_WORKFLOWS_TOKEN` so automatic moves rewrite those calls too.
 * **Update**: ks-utility v0.15.0: pin moved; updates open with `app_update::install::open` (macOS quits after 6 s, Windows at once, session saved first); `ks-utility-bump.yml` added; the release check (`@v0.15.0`) runs ks-suite-check. [Releasing](release.md) updated.
 * **Update**: `v0.2.2` released (installer icon named explicitly; icon test).
 * **Update**: [Releasing](release.md): icons audited for the suite's "App icons" rule: all our own (no Tauri default); the NSIS installer icon is now named explicitly; an icon test added.
