@@ -1,4 +1,4 @@
-//! Handing things to the system: links to the default browser, files to their app, and the
+//! Handing things to the system: links to the default browser, text files to the editor, and the
 //! clipboard for the shortcuts that are not the system's own (Ctrl+Shift+C/V on Windows).
 
 use std::path::Path;
@@ -22,10 +22,6 @@ pub fn open_url(url: &str) -> Result<(), Msg> {
     launch(url)
 }
 
-/// Opens a file with its app (macOS `open`, Windows the shell's association).
-pub fn open_path(path: &Path) -> Result<(), Msg> {
-    launch(&path.to_string_lossy())
-}
 
 /// Opens a text file in the system's text editor.
 pub fn open_in_editor(path: &Path) -> Result<(), Msg> {

@@ -521,6 +521,25 @@ export class App {
     await getCurrentWindow().destroy();
   }
 
+  /**
+   * The update's installer is open (ks-utility `install::open`): the app quits so the copy can be
+   * replaced. Windows: at once. macOS: after saying so for MAC_QUIT_AFTER (6 s), since Finder
+   * cannot replace a running app. The session is saved first; running programs are not asked
+   * about, since the update cannot wait for them.
+   */
+  afterUpdateOpened(opened: string): void {
+    const quit = async () => {
+      await this.saveSessionNow();
+      await api.quitApp();
+    };
+    if (opened === "macos") {
+      this.showToast(t("common.appUpdate.openedMacCloses", { app: "KS Forge" }));
+      setTimeout(() => void quit(), 6000);
+    } else {
+      setTimeout(() => void quit(), 1000);
+    }
+  }
+
   /** Quits the app: every window, asking first when a program is running in any of them. */
   async quit(): Promise<void> {
     if (this.state.settings.confirmClose && (await api.busyAny().catch(() => false))) {

@@ -137,11 +137,14 @@ impl Updater {
             let _ = std::fs::remove_file(&file);
             return Err(msg!("common.appUpdate.damaged"));
         }
-        if let Err(e) = mark_from_internet(&file, &found.url) {
-            eprintln!("could not mark the update as downloaded: {e}");
-        }
-        crate::system::open_path(&file).map_err(|m| msg!("common.appUpdate.openFailed", detail = m.code))?;
-        Ok(if cfg!(windows) { "windows" } else { "macos" })
+        // ks-utility marks the file as downloaded from the internet (quarantine on macOS, the
+        // internet zone on Windows) and opens it; the interface then quits the app (Windows at
+        // once, macOS after MAC_QUIT_AFTER) so the copy can be replaced.
+        let opened = app_update::install::open(&file, "KS Forge").map_err(|e| msg!("common.appUpdate.openFailed", detail = e))?;
+        Ok(match opened {
+            app_update::install::Opened::Windows => "windows",
+            app_update::install::Opened::Mac => "macos",
+        })
     }
 }
 
@@ -191,22 +194,6 @@ async fn download(url: &str, to: &Path, size: u64) -> Result<(), String> {
     Ok(())
 }
 
-/// Marks the file as downloaded from the internet, so the system checks it as it would a
-/// browser download (macOS quarantine attribute, Windows zone identifier).
-fn mark_from_internet(file: &Path, url: &str) -> std::io::Result<()> {
-    if cfg!(target_os = "macos") {
-        let value = format!("0081;{:x};KS Forge;", now_secs());
-        let s = std::process::Command::new("xattr").arg("-w").arg("com.apple.quarantine").arg(value).arg(file).status()?;
-        if !s.success() {
-            return Err(std::io::Error::other("xattr failed"));
-        }
-    } else if cfg!(windows) {
-        let mut ads = file.as_os_str().to_owned();
-        ads.push(":Zone.Identifier");
-        std::fs::write(PathBuf::from(ads), format!("[ZoneTransfer]\r\nZoneId=3\r\nHostUrl={url}\r\n"))?;
-    }
-    Ok(())
-}
 
 fn now_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs())

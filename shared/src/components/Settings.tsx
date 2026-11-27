@@ -559,7 +559,7 @@ function Updates() {
             disabled={u.phase === "downloading"}
             onClick={async () => {
               const opened = await app.updates.installNow();
-              if (opened === "windows") setTimeout(() => void app.quit(), 1500);
+              if (opened) app.afterUpdateOpened(opened);
             }}
           >
             {t("common.appUpdate.installButton", { size: formatBytes(u.available.size) })}
