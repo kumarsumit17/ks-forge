@@ -1,5 +1,6 @@
 # 2026-11-27
 
+* **Update**: `v0.2.2` released (installer icon named explicitly; icon test).
 * **Update**: [Releasing](release.md): icons audited for the suite's "App icons" rule: all our own (no Tauri default); the NSIS installer icon is now named explicitly; an icon test added.
 * **Update**: `v0.2.1` released, the first release through ks-utility's shared Tauri workflows; both files verified with `--signer-workflow`.
 * **Update**: links to the suite repository now use its new name, `kumasumit/ks-suite`.
