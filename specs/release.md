@@ -53,9 +53,16 @@ Every icon is KS Forge's own, drawn by `scripts/make-icon.py` and turned into al
 - Not yet signed by Apple (ad hoc signature, no notarisation) or Microsoft (no Authenticode); the release notes say how to open the files the first time. Real signing needs an Apple Developer ID and a Windows code-signing certificate from the owner.
 - The four `ks-release` secrets are set on the repository (suite rule "signing first", 2026-11-24); this desktop-only app does not use them yet.
 
-## Build, test, release, no waiting
+## DEV, test, approval, production
 
-The owner's rule for every KS-Suite app ([release cycle](https://github.com/kumasumit/ks-suite/blob/main/specs/release-cycle.md)): every feature or fix is built, tested (unit tests, the self-test on macOS and on CI's installed Windows copy), pushed to `dev` and released with the next tag, with no approval asked before a tag. Nothing is committed or released while a test fails. A feature raises MINOR, a fix raises PATCH. The owner's hand checks on a real Mac or Windows PC come after the release and never block one; what they find goes into the next version.
+The owner's rule for every KS-Suite app since 2026-11-27 ([release cycle](https://github.com/kumasumit/ks-suite/blob/main/specs/release-cycle.md), "DEV, test, approval, production"); it replaced "build, test, release, no waiting":
+
+- All work is on `dev`, which starts from `main` (the latest production release).
+- A **DEV build** is a rehearsal of the release workflow on `dev` (manual run): it builds and checks both systems' files, publishes nothing, and keeps them as run artifacts for the owner to test by hand. Fixes get new DEV builds.
+- A **production tag** (`vX.Y.Z`, `mac-vX.Y.Z` or `windows-vX.Y.Z`) needs the owner's explicit approval **for that platform**, given in the conversation; approval for one platform never covers another. The only exception is a platform's first-ever release. `v0.2.3` on ks-utility v0.18.4 was KS Forge's initial-rollout release under this rule.
+- A new ks-utility version moves the pin on `dev` (the bump workflow) but never starts a release.
+- macOS and Windows may ship unsigned; every release attaches `SHA256SUMS` and its notes record the ks-utility version (ks-utility's publish workflow adds both).
+- Nothing is committed or released while a test fails. A feature raises MINOR, a fix raises PATCH.
 
 ## Steps
 
