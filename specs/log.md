@@ -1,5 +1,6 @@
 # 2026-11-27
 
+* **Update**: ks-utility v0.18.0: pin moved; the release and bump workflows call ks-utility's shared workflows at `@main` (owner's decision: no `@vX` refs to move).
 * **Update**: owner's decision: no `KS_WORKFLOWS_TOKEN`; the bump workflow no longer passes it. The calls of ks-utility's workflows move to `@main` once ks-utility's check accepts it.
 * **Update**: ks-utility v0.17.0: pin and workflow calls moved; the macOS update result is `macos-closes`, so the shared update store shows that KS Forge now closes; the quit waits `MAC_QUIT_AFTER_MS`.
 * **Update**: ks-utility v0.16.0: pin and the `@vX` calls of its shared workflows moved; the bump workflow passes `KS_WORKFLOWS_TOKEN` so automatic moves rewrite those calls too.

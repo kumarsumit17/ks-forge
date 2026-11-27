@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-    uses: kumasumit/ks-utility/.github/workflows/ks-utility-bump.yml@v0.17.0
+    uses: kumasumit/ks-utility/.github/workflows/ks-utility-bump.yml@main
     with:
       kind: tauri
       # macOS: the PTY tests need a Unix PTY, and Cargo builds the macOS-only code.

@@ -39,7 +39,7 @@ jobs:
   version:
     permissions:
       contents: read
-    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-check.yml@v0.17.0
+    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-check.yml@main
     with:
       version: ${{ inputs.version }}
       platform: ${{ inputs.platform }}
@@ -154,7 +154,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml@v0.17.0
+    uses: kumasumit/ks-utility/.github/workflows/tauri-app-release-publish.yml@main
     with:
       tag: ${{ needs.version.outputs.tag }}
       version: ${{ needs.version.outputs.version }}
